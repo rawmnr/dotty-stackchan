@@ -133,7 +133,10 @@ if _PROMETHEUS_AVAILABLE:
 
     dotty_calendar_fetch_failures_total = Counter(
         "dotty_calendar_fetch_failures_total",
-        "Total Google Calendar fetch failures (excludes intentional skips).",
+        "Total Google Calendar fetch failures (excludes intentional skips). "
+        "`kind` distinguishes timeout / parse / orchestrator / other so a "
+        "stuck-quota condition reads differently from a flaky network.",
+        labelnames=("kind",),
         registry=REGISTRY,
     )
 

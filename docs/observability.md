@@ -78,7 +78,7 @@ failure rate, and a Kid Mode single-stat toggle.
 | `dotty_request_errors_total{endpoint,kind}` | Counter | Errors partitioned by endpoint and `kind` (`timeout`, `binary_missing`, `exception`). |
 | `dotty_llm_tokens_total{kind,model}` | Counter | LLM token volume; reserved for future per-call accounting. |
 | `dotty_active_acp_sessions` | Gauge | Live ACP child sessions. The bridge is single-child so this is normally 0 (idle) or 1 (in flight). |
-| `dotty_calendar_fetch_failures_total` | Counter | Google Calendar fetch errors. The cache backs off automatically; sustained failures mean look at the bridge log. |
+| `dotty_calendar_fetch_failures_total{kind}` | Counter | Google Calendar fetch errors partitioned by `kind` (`timeout`, `parse`, `other`, `orchestrator`). The cache backs off automatically; sustained failures mean look at the bridge log. A spike of `timeout` reads as a network/quota issue; `parse` usually means the upstream `gws` CLI changed shape. |
 | `dotty_smart_mode_invocations_total` | Counter | Smart-Mode requests (the `metadata.smart_mode` flag opted into the larger LLM). |
 | `dotty_kid_mode_active` | Gauge | `1` if Kid Mode guardrails are active, `0` otherwise. Flipped live by the portal admin endpoint. |
 | `dotty_perception_events_total{type}` | Counter | Ambient-perception events ingested, partitioned by `face_detected` / `face_lost` / `sound_event`. |
@@ -93,7 +93,7 @@ home-deployed robot:
 - **Sustained error rate.**
   `sum by (endpoint, kind) (rate(dotty_request_errors_total[5m])) > 0.05`
 - **Calendar fetch flatlined failing.**
-  `rate(dotty_calendar_fetch_failures_total[15m]) > 0.005` for 30 m.
+  `sum(rate(dotty_calendar_fetch_failures_total[15m])) > 0.005` for 30 m.
 - **Bridge target down.**
   `up{job="dotty-bridge"} == 0` for 5 m. Catches the case where
   systemd / Docker hasn't restarted the bridge.

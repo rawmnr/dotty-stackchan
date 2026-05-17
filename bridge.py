@@ -788,8 +788,20 @@ async def _fetch_calendar_events() -> list[Event]:
                     start_iso=start_iso,
                     calendar_id=cal_id,
                 ))
+        except asyncio.TimeoutError:
+            failures += 1
+            if _METRICS_AVAILABLE:
+                _safe_metric(dotty_calendar_fetch_failures_total.labels(kind="timeout").inc)
+            log.warning("calendar fetch timed out cal=%s", cal_id, exc_info=True)
+        except (json.JSONDecodeError, ValueError):
+            failures += 1
+            if _METRICS_AVAILABLE:
+                _safe_metric(dotty_calendar_fetch_failures_total.labels(kind="parse").inc)
+            log.warning("calendar fetch parse failed cal=%s", cal_id, exc_info=True)
         except Exception:
             failures += 1
+            if _METRICS_AVAILABLE:
+                _safe_metric(dotty_calendar_fetch_failures_total.labels(kind="other").inc)
             log.warning("calendar fetch failed cal=%s", cal_id, exc_info=True)
     if CALENDAR_IDS and failures == len(CALENDAR_IDS):
         # Every calendar failed — propagate so the polling loop can back off.
@@ -885,9 +897,17 @@ async def _refresh_caches() -> None:
         except Exception:
             # Don't update `fetched` so the next request retries; bump
             # failure counter so the polling loop can back off.
+            #
+            # Per-calendar exceptions are already counted with finer-grained
+            # `kind` labels inside `_fetch_calendar_events`. This outer arm
+            # only fires when the orchestrator itself raises — typically the
+            # `RuntimeError("all calendar fetches failed")` propagation, or
+            # an unexpected setup-time error (subprocess spawn, env). Tag
+            # `kind="orchestrator"` so it's distinguishable from the
+            # categorized per-calendar failures and doesn't double-count.
             _calendar_cache["consecutive_failures"] += 1
             if _METRICS_AVAILABLE:
-                _safe_metric(dotty_calendar_fetch_failures_total.inc)
+                _safe_metric(dotty_calendar_fetch_failures_total.labels(kind="orchestrator").inc)
             log.warning("calendar refresh failed (consecutive=%d)",
                         _calendar_cache["consecutive_failures"], exc_info=True)
 

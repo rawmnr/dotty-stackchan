@@ -527,8 +527,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(dotty_calendar_fetch_failures_total[5m])",
-          "legendFormat": "calendar fetch failures",
+          "expr": "sum by (kind) (rate(dotty_calendar_fetch_failures_total[5m]))",
+          "legendFormat": "{{kind}}",
           "range": true,
           "refId": "A"
         }
