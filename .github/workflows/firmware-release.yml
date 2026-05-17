@@ -43,9 +43,16 @@ jobs:
         working-directory: firmware/firmware
         run: python fetch_repos.py
 
+      # The espressif/idf container ships idf.py under /opt/esp/idf/tools/
+      # but only puts it on PATH when /opt/esp/idf/export.sh is sourced.
+      # GHA's default `sh -e` shell skips the container entrypoint that would
+      # otherwise do this, so we source it ourselves.
       - name: Build firmware
         working-directory: firmware/firmware
-        run: idf.py build
+        shell: bash
+        run: |
+          . /opt/esp/idf/export.sh
+          idf.py build
 
       # Collect the three release binaries and generate checksums.
       # Build output lands in firmware/firmware/build/.
