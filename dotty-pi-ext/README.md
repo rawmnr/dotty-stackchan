@@ -5,13 +5,16 @@ runtime. Installed inside the [`dotty-pi`](../dotty-pi/) container at
 `/root/.pi/extensions/dotty-pi-ext/`, surfaced to the agent via pi's
 extension manifest.
 
-**Status: skeleton.** Tool implementations are stubs pending the #36
-cutover. Bridge.py is still the source of truth in production.
+**Status: 3 of 4 tools ported + integration-tested end-to-end inside
+the live dotty-pi container.** `take_photo` is still pending, blocked
+on the perception-cache rehoming design (#36's "9 dashboard perception
+consumers" pile). Bridge.py is still the source of truth in production
+until cutover.
 
-## The five voice tools
+## The four voice tools
 
 These are the tools that voice turns invoke during conversation. Each
-must replicate the semantics of the matching `_voice_tool_*` handler in
+replicates the semantics of the matching `_voice_tool_*` handler in
 `bridge.py` (port the function bodies; the contracts below summarise
 them).
 
@@ -21,7 +24,16 @@ them).
 | `think_hard(question)` | Direct POST to llama-swap `qwen3.6:27b-think` with `enable_thinking=false`, 200-token cap, terse 1-2 sentence answer. | `bridge.py::_voice_tool_think_hard` |
 | `take_photo()` | Returns the latest cached vision description if ≤30 s old, otherwise a "can't see" reply. v2 will actively fire the take_photo MCP and await fresh capture. | `bridge.py::_voice_tool_take_photo` |
 | `play_song(name)` | Resolves free-form name against xiaozhi's `/xiaozhi/admin/songs` catalogue (60 s cache), then POSTs `/xiaozhi/admin/play-asset`. | `bridge.py::_voice_tool_play_song` |
-| `set_led(...)` | **Not yet built in bridge.py.** Pattern is in #36 Step-5 carryover; model on `tier1_slim.py::_dispatch_set_toggle`. ~30 LOC dispatcher when the bridge MCP path is wired. | (TBD) |
+
+### Not a tool: LED control
+
+The 12-pixel LED ring is **reserved for mode/state indication** and is
+not voice-controllable. Both the LEFT ring (0-5 state arc) and the
+RIGHT ring (6-11 status pips) are owned by the firmware's StateManager;
+there is no `set_led` tool, and adding one would fight the 5 Hz state-
+arc re-assert. A voice-driven LED tool was listed as a #36 Step-5
+carryover but is explicitly out of scope per product decision —
+LEDs belong to the state machine.
 
 ## Migration constraints
 
