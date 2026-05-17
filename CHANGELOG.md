@@ -6,7 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-Post-v0.1 work — code shipped to `main` but not yet deployed live or tagged.
+_Nothing yet — `server-v0.1.0` was tagged on 2026-05-17._
+
+## [server-v0.1.0] - 2026-05-17
+
+First git-tagged public release. Covers all server + firmware work shipped to `main` between project inception and 2026-05-17. The earlier `[0.1.0] - 2026-04-25` entry below describes a pre-tag internal milestone — retained for historical reference, but `server-v0.1.0` is the canonical first release.
 
 ### Added — server (2026-04-26 → 2026-05-15)
 - **Two-tier voice path: `Tier1Slim` LLM provider** (`b73f583`, `custom-providers/tier1_slim/tier1_slim.py`) — slim inner-loop LLM in xiaozhi-server that runs a small/fast model (default `qwen3.5:4b` against llama-swap) for chitchat and escalates tool calls to the bridge via `POST /api/voice/escalate`. Tools: `memory_lookup`, `think_hard`, `take_photo`, `play_song`. Cuts plain-chat latency well below 1 s; reserves the heavy ZeroClaw / cloud path for tools that genuinely need it. `set_runtime()` allows hot-swapping model/url/api_key in flight (no daemon restart) — used by smart-mode flips.
@@ -93,9 +97,9 @@ Post-v0.1 work — code shipped to `main` but not yet deployed live or tagged.
 - Camera `VIDIOC_STREAMOFF` peripheral-off when face-detect is paused (closes the Layer 1 privacy LED hole noted in `eb595f2`). **Status 2026-05-15: superseded by `ac51662` privacy-sleep camera disable** — the broader privacy posture now covers this hole at sleep entry, though pause-aware streamoff is still a finer-grained want.
 - Reproducible firmware builds — IDF Dockerfile SHA256 pin + `dependencies.lock` + `make verify-firmware` target.
 
-## [0.1.0] - 2026-04-25
+## [0.1.0] - 2026-04-25 (pre-tag internal milestone — superseded by server-v0.1.0)
 
-First tagged release — early-feedback alpha. Works end-to-end on the maintainer's hardware (M5Stack StackChan + Docker host + ZeroClaw host + ZeroClaw + OpenRouter Mistral Small 3.2). External users welcome; see `ROADMAP.md` for known issues.
+Originally written as a release entry, but never actually tagged. Retained here as a snapshot of what shipped by 2026-04-25; the full v0.1 surface is in the `[server-v0.1.0]` entry above. Works end-to-end on the maintainer's hardware (M5Stack StackChan + Docker host + ZeroClaw host + ZeroClaw + OpenRouter Mistral Small 3.2). External users welcome; see `ROADMAP.md` for known issues.
 
 ### Fixed in v0.1.0
 - **Smart Mode marker check.** `zeroclaw.py` `_payload` was matching `[SMART_MODE]\n` against the composed `[Context] … [User] …` payload (marker landed at offset ~2700, so `startswith` was always False). Every voice "smart mode" turn since `434988d` silently fell back to the default voice model. Fix detects markers on the raw user message before `_compose()` wraps it.
