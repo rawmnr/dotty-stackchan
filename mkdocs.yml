@@ -8,6 +8,8 @@ repo_name: BrettKinny/dotty-stackchan
 
 theme:
   name: material
+  logo: assets/dotty-hero.svg
+  favicon: assets/dotty-hero.svg
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
