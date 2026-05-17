@@ -9,8 +9,10 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { memoryLookupTool } from "./tools/memory_lookup.ts";
+import { thinkHardTool } from "./tools/think_hard.ts";
 
 export default function (pi: ExtensionAPI) {
   pi.registerTool(memoryLookupTool);
-  // think_hard, take_photo, play_song, set_led land in subsequent slices.
+  pi.registerTool(thinkHardTool);
+  // take_photo, play_song, set_led land in subsequent slices.
 }
