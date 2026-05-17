@@ -18,7 +18,36 @@ BOLD   := \033[1m
 RESET  := \033[0m
 
 # ── Targets ──────────────────────────────────────────────────────────
-.PHONY: help setup fetch-models doctor audit up down logs status voice-list voice-install sbom verify-firmware
+.PHONY: help setup fetch-models doctor audit up down logs status voice-list voice-install sbom verify-firmware _preflight-compose
+
+# ─────────────────────────────────────────────────────────────────────
+# _preflight-compose — fail fast if Docker Compose v2 plugin is missing
+#
+# Issue #6: on Ubuntu 24.04 with the distro `docker.io` package, only
+# the legacy v1 `docker-compose` (Python, separate binary) is shipped.
+# `docker compose <subcmd>` either errors with "is not a docker
+# command" or routes args into a parser that rejects flags like `-d`
+# with "unknown shorthand flag". Either way the user sees a cryptic
+# failure inside whatever target they invoked. Catch it up front with
+# install guidance instead.
+# ─────────────────────────────────────────────────────────────────────
+_preflight-compose:
+	@if ! docker compose version >/dev/null 2>&1; then \
+	  echo ""; \
+	  echo -e "$(RED)Error: Docker Compose v2 plugin is not available.$(RESET)"; \
+	  echo ""; \
+	  echo "This Makefile requires the v2 plugin (the 'docker compose'"; \
+	  echo "subcommand, no hyphen). The legacy 'docker-compose' binary"; \
+	  echo "is not supported."; \
+	  echo ""; \
+	  echo "Install on Debian/Ubuntu:"; \
+	  echo "    sudo apt install docker-compose-plugin"; \
+	  echo ""; \
+	  echo "Other distros / manual install:"; \
+	  echo "    https://docs.docker.com/compose/install/linux/"; \
+	  echo ""; \
+	  exit 1; \
+	fi
 
 help: ## Show this help
 	@echo ""
@@ -31,7 +60,7 @@ help: ## Show this help
 # ─────────────────────────────────────────────────────────────────────
 # setup — interactive first-run wizard
 # ─────────────────────────────────────────────────────────────────────
-setup: ## Interactive first-run wizard (prompts for IPs, names, timezone)
+setup: _preflight-compose ## Interactive first-run wizard (prompts for IPs, names, timezone)
 	@echo ""
 	@echo -e "$(BOLD)Dotty setup wizard$(RESET)"
 	@echo "This will substitute placeholders in config files and start the stack."
@@ -283,13 +312,13 @@ audit: ## Audit outbound network connections (verify local-except-LLM claim)
 # ─────────────────────────────────────────────────────────────────────
 # Docker shortcuts
 # ─────────────────────────────────────────────────────────────────────
-up: ## Start containers (docker compose up -d)
+up: _preflight-compose ## Start containers (docker compose up -d)
 	docker compose up -d
 
-down: ## Stop containers (docker compose down)
+down: _preflight-compose ## Stop containers (docker compose down)
 	docker compose down
 
-logs: ## Tail container logs (docker compose logs -f)
+logs: _preflight-compose ## Tail container logs (docker compose logs -f)
 	docker compose logs -f
 
 voice-list: ## List curated Piper voices (see docs/voice-catalog.md)
@@ -355,7 +384,7 @@ verify-firmware: ## Build firmware in IDF container and compute SHA256 checksums
 	fi
 	@echo ""
 
-status: ## Show container status + bridge health
+status: _preflight-compose ## Show container status + bridge health
 	@docker compose ps
 	@echo ""
 	@ZEROCLAW_HOST=$$(grep -oP 'url: http://\K[0-9.]+' .config.yaml 2>/dev/null | head -1); \
