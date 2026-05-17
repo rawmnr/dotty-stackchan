@@ -9,10 +9,13 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { memoryLookupTool } from "./tools/memory_lookup.ts";
+import { playSongTool } from "./tools/play_song.ts";
 import { thinkHardTool } from "./tools/think_hard.ts";
 
 export default function (pi: ExtensionAPI) {
   pi.registerTool(memoryLookupTool);
   pi.registerTool(thinkHardTool);
-  // take_photo, play_song, set_led land in subsequent slices.
+  pi.registerTool(playSongTool);
+  // take_photo (blocked on perception-cache rehoming) and set_led
+  // (not yet in bridge.py — per #36 carryover) land later.
 }
