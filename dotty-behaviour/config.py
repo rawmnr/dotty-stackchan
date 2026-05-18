@@ -11,9 +11,17 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 # Version stamp surfaced on /health and in startup logs.
 VERSION: str = "0.1.0"
+
+# Local timezone — used for NDJSON daily filenames and timestamps.
+# Falls back to UTC if the TZ env var names a zone Python can't find.
+try:
+    LOCAL_TZ: ZoneInfo = ZoneInfo(os.environ.get("TZ", "Australia/Brisbane"))
+except Exception:
+    LOCAL_TZ = ZoneInfo("UTC")
 
 
 def _env_int(name: str, default: int) -> int:
@@ -127,3 +135,30 @@ PURR_COOLDOWN_SEC: float = _env_float("PURR_COOLDOWN_SEC", 5.0)
 # Approximate playback length — used to extend `last_chat_t` so the
 # sound localiser stays quiet while the purr plays.
 PURR_DURATION_SEC: float = _env_float("PURR_DURATION_SEC", 2.0)
+
+# sleep_dreamer — schedule N dreams across an estimated 8h sleep window
+# at evenly-spaced fractions (default 3 dreams at 25/50/75%). Override
+# DREAM_WINDOW_SECONDS for bench testing (e.g. 180 → 45/90/135 s).
+DREAMER_ENABLED: bool = os.environ.get("DREAMER_ENABLED", "1") == "1"
+DREAM_WINDOW_SECONDS: float = _env_float("DREAM_WINDOW_SECONDS", 28800.0)
+DREAM_COUNT_PER_NIGHT: int = _env_int("DREAM_COUNT_PER_NIGHT", 3)
+
+# dance_reflector — write a short LLM reflection on dance_ended.
+DANCE_REFLECTOR_ENABLED: bool = (
+    os.environ.get("DANCE_REFLECTOR_ENABLED", "1") == "1"
+)
+
+# Sci-fi literary seeds — the dreamer picks one uniformly at random
+# per dream; the LLM is asked to draw on the seed's atmosphere
+# without retelling it. Extend by appending.
+DREAM_INSPIRATIONS: tuple[str, ...] = (
+    "The Fifth Element",
+    "Murakami",
+    "Dune",
+    "Blade Runner",
+    "Do Androids Dream of Electric Sheep?",
+    "Asimov",
+    "The Last Question",
+    "Slaughterhouse-Five",
+    "Cat's Cradle",
+)

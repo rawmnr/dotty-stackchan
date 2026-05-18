@@ -16,16 +16,20 @@ asyncio.create_task — same lifecycle the bridge uses today, just
 externalised.
 """
 
+from .dance_reflector import DanceReflector
 from .face_identified_refresher import FaceIdentifiedRefresher
 from .face_lost_aborter import FaceLostAborter
 from .purr_player import PurrPlayer
+from .sleep_dreamer import SleepDreamer
 from .sound_turner import SoundTurner
 from .wake_word_turner import WakeWordTurner
 
 __all__ = [
+    "DanceReflector",
     "FaceIdentifiedRefresher",
     "FaceLostAborter",
     "PurrPlayer",
+    "SleepDreamer",
     "SoundTurner",
     "WakeWordTurner",
 ]

@@ -15,13 +15,16 @@ import asyncio
 
 import config
 from consumers import (
+    DanceReflector,
     FaceIdentifiedRefresher,
     FaceLostAborter,
     PurrPlayer,
+    SleepDreamer,
     SoundTurner,
     WakeWordTurner,
 )
 from dispatch import NarrativeLLMClient, XiaozhiAdminClient
+from logs import NdjsonWriter
 from perception import PerceptionState
 from routes import health as health_routes
 from routes import perception as perception_routes
@@ -117,6 +120,31 @@ async def lifespan(app: FastAPI):
         )
     else:
         log.info("wake-word turner disabled by WAKE_TURN_ENABLED=0")
+
+    if config.DREAMER_ENABLED:
+        consumers.append(
+            SleepDreamer(
+                state,
+                narrative,
+                NdjsonWriter(config.LOG_DIR, "dreams", config.LOCAL_TZ),
+                window_seconds=config.DREAM_WINDOW_SECONDS,
+                count_per_night=config.DREAM_COUNT_PER_NIGHT,
+                inspirations=config.DREAM_INSPIRATIONS,
+            )
+        )
+    else:
+        log.info("sleep dreamer disabled by DREAMER_ENABLED=0")
+
+    if config.DANCE_REFLECTOR_ENABLED:
+        consumers.append(
+            DanceReflector(
+                state,
+                narrative,
+                NdjsonWriter(config.LOG_DIR, "dances", config.LOCAL_TZ),
+            )
+        )
+    else:
+        log.info("dance reflector disabled by DANCE_REFLECTOR_ENABLED=0")
 
     tasks = [
         asyncio.create_task(c.run(), name=type(c).__name__) for c in consumers
