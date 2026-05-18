@@ -16,6 +16,7 @@ import asyncio
 import config
 from consumers import (
     DanceReflector,
+    FaceGreeter,
     FaceIdentifiedRefresher,
     FaceLostAborter,
     IdlePhotographer,
@@ -32,6 +33,7 @@ from dispatch import (
     VLMClient,
     XiaozhiAdminClient,
 )
+from household import HouseholdRegistry
 from logs import NdjsonWriter
 from perception import PerceptionState
 from routes import audio as audio_routes
@@ -92,6 +94,12 @@ async def lifespan(app: FastAPI):
     app.state.narrative = narrative
     app.state.vlm = vlm
     app.state.audio_caption = audio_caption
+
+    # Household registry — YAML-backed, hot-reload on mtime change.
+    # Empty when household.yaml is missing (valid state — resolves
+    # everyone to `_household`).
+    household = HouseholdRegistry(path=config.HOUSEHOLD_YAML_PATH)
+    app.state.household = household
     # kid-mode default — flipped by the dashboard's kid-mode toggle
     # (deferred slice). vision_explain reads this via get_kid_mode().
     app.state.kid_mode = False
@@ -209,6 +217,22 @@ async def lifespan(app: FastAPI):
         )
     else:
         log.info("scene synthesis loop disabled by SCENE_SYNTHESIS_ENABLED=0")
+
+    consumers.append(
+        FaceGreeter(
+            state,
+            xiaozhi,
+            household,
+            bare_greet_text=config.FACE_GREET_TEXT,
+            bare_min_interval_sec=config.FACE_GREET_MIN_INTERVAL_SEC,
+            bare_hour_start=config.FACE_GREET_HOUR_START,
+            bare_hour_end=config.FACE_GREET_HOUR_END,
+            name_template=config.FACE_NAME_GREET_TEMPLATE,
+            name_min_interval_sec=config.FACE_NAME_GREET_MIN_INTERVAL_SEC,
+            name_quiet_after_chat_sec=config.FACE_NAME_GREET_QUIET_AFTER_CHAT_SEC,
+            tz=config.LOCAL_TZ,
+        )
+    )
 
     if config.SECURITY_CYCLE_ENABLED:
         security = SecurityCycle(

@@ -270,6 +270,37 @@ SCENE_SYNTHESIS_TRIGGER_EVENTS: frozenset[str] = frozenset(
 
 
 # ---------------------------------------------------------------------------
+# Face greeter — bare "Hi!" on face_detected when the household has no
+# appearance-bearing roster. With a roster, the proactive greeter (Layer
+# 6, deferred) handles named greetings via the face_recognized path.
+# ---------------------------------------------------------------------------
+FACE_GREET_MIN_INTERVAL_SEC: float = _env_float(
+    "FACE_GREET_MIN_INTERVAL_SEC",
+    _env_float("FACE_GREET_COOLDOWN_SEC", 30.0),
+)
+FACE_GREET_TEXT: str = os.environ.get("FACE_GREET_TEXT", "Hi!")
+FACE_GREET_HOUR_START: int = _env_int("FACE_GREET_HOUR_START", 6)
+FACE_GREET_HOUR_END: int = _env_int("FACE_GREET_HOUR_END", 21)
+
+# Name greeter (face_recognized) — "Oh, it's <name>!" via TTS.
+FACE_NAME_GREET_MIN_INTERVAL_SEC: float = _env_float(
+    "FACE_NAME_GREET_MIN_INTERVAL_SEC", 30.0
+)
+FACE_NAME_GREET_TEMPLATE: str = os.environ.get(
+    "FACE_NAME_GREET_TEMPLATE", "Oh, it's {name}!"
+)
+FACE_NAME_GREET_QUIET_AFTER_CHAT_SEC: float = _env_float(
+    "FACE_NAME_GREET_QUIET_AFTER_CHAT_SEC", 10.0
+)
+
+# Path to household.yaml — surfaced as a separate config entry so the
+# state-file slice can override it without touching the package.
+HOUSEHOLD_YAML_PATH: str = os.environ.get(
+    "HOUSEHOLD_YAML_PATH",
+    str(STATE_DIR / "household.yaml"),
+)
+
+# ---------------------------------------------------------------------------
 # Security capture loop — fires on state_changed → security; runs a
 # per-device interval timer that does take_photo + capture_audio +
 # NDJSON append. Text-only persistence (image / audio bytes discarded;

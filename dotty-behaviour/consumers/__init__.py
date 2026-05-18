@@ -17,6 +17,7 @@ externalised.
 """
 
 from .dance_reflector import DanceReflector
+from .face_greeter import FaceGreeter
 from .face_identified_refresher import FaceIdentifiedRefresher
 from .face_lost_aborter import FaceLostAborter
 from .idle_photographer import IdlePhotographer
@@ -29,6 +30,7 @@ from .wake_word_turner import WakeWordTurner
 
 __all__ = [
     "DanceReflector",
+    "FaceGreeter",
     "FaceIdentifiedRefresher",
     "FaceLostAborter",
     "IdlePhotographer",
