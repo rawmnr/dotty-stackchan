@@ -5,11 +5,11 @@ runtime. Installed inside the [`dotty-pi`](../dotty-pi/) container at
 `/root/.pi/extensions/dotty-pi-ext/`, surfaced to the agent via pi's
 extension manifest.
 
-**Status: 4 of 5 tools ported + integration-tested end-to-end inside
-the live dotty-pi container.** `take_photo` is still pending, blocked
-on the perception-cache rehoming design (#36's "9 dashboard perception
-consumers" pile). Bridge.py is still the source of truth in production
-until cutover.
+**Status: 5 of 5 tools ported.** `take_photo` reads from the new
+`dotty-behaviour` daemon (`GET /api/voice/take_photo`); the other
+four are unchanged. Bridge.py is still the source of truth in
+production until the dotty-behaviour cutover (#36) flips
+xiaozhi-server's `VISION_BRIDGE_URL` to point at port 8090.
 
 ## The five voice tools
 
@@ -23,7 +23,7 @@ bodies; the contracts below summarise them).
 | `memory_lookup(query)` | FTS5 search against `brain.db`; returns top-3 snippets pipe-joined, ≤200 chars each. | `bridge.py::_voice_tool_memory_lookup` |
 | `remember(fact)` | Stores a durable fact (≤300 codepoints, trimmed) into the `memories` table with `category=core`, `importance=0.7`. Mirrors bridge.py's `/api/voice/remember` HTTP endpoint, but called as a tool from inside the agent loop rather than as a side-channel POST. | `bridge.py::voice_remember` (`/api/voice/remember`) |
 | `think_hard(question)` | Direct POST to llama-swap `qwen3.6:27b-think` with `enable_thinking=false`, 200-token cap, terse 1-2 sentence answer. | `bridge.py::_voice_tool_think_hard` |
-| `take_photo()` | Returns the latest cached vision description if ≤30 s old, otherwise a "can't see" reply. v2 will actively fire the take_photo MCP and await fresh capture. | `bridge.py::_voice_tool_take_photo` |
+| `take_photo()` | GET to dotty-behaviour `/api/voice/take_photo` — returns the latest cached vision description if ≤30 s old, otherwise a "can't see" reply. v2 will actively fire the take_photo MCP and await fresh capture. | `dotty-behaviour::routes/voice.py` (lift of `bridge.py::_voice_tool_take_photo`) |
 | `play_song(name)` | Resolves free-form name against xiaozhi's `/xiaozhi/admin/songs` catalogue (60 s cache), then POSTs `/xiaozhi/admin/play-asset`. | `bridge.py::_voice_tool_play_song` |
 
 ### Not a tool: per-turn auto-log

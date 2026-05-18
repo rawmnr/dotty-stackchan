@@ -40,6 +40,7 @@ from routes import audio as audio_routes
 from routes import health as health_routes
 from routes import perception as perception_routes
 from routes import vision as vision_routes
+from routes import voice as voice_routes
 
 
 # Configure root logger early — uvicorn replaces handlers, this is just
@@ -285,3 +286,4 @@ app.include_router(health_routes.router)
 app.include_router(perception_routes.router)
 app.include_router(vision_routes.router)
 app.include_router(audio_routes.router)
+app.include_router(voice_routes.router)
