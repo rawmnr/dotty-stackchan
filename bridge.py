@@ -1697,6 +1697,22 @@ _PERCEPTION_STALE_THRESHOLD_S: float = 30.0  # idle > 30 s → stale
 _PERCEPTION_RECENT_MAX: int = 20
 _perception_recent_events: dict[str, "collections.deque[dict]"] = {}
 
+# #69 — rolling sound-localizer `balance` samples for the dashboard State
+# tile sparkline. sound_event fires ~1 Hz while there's sound; 90 samples
+# comfortably spans the 60 s window the sparkline renders.
+_SOUND_BALANCE_WINDOW_SEC: float = 60.0
+_sound_balance_history: "collections.deque[tuple[float, float]]" = (
+    collections.deque(maxlen=90)
+)
+
+
+def _sound_balance_series() -> list[float]:
+    """Sound-localizer `balance` samples from the last
+    `_SOUND_BALANCE_WINDOW_SEC`, oldest→newest — the dashboard sparkline
+    source (#69). Empty when no sound_event has landed recently."""
+    cutoff = time.time() - _SOUND_BALANCE_WINDOW_SEC
+    return [bal for ts, bal in _sound_balance_history if ts >= cutoff]
+
 
 def _perception_subscribe() -> asyncio.Queue:
     q: asyncio.Queue = asyncio.Queue(maxsize=200)
@@ -1792,6 +1808,9 @@ def _update_perception_state(device_id: str, name: str,
         state["last_sound_dir"] = data.get("direction")
         state["last_sound_t"] = ts
         state["last_sound_energy"] = data.get("energy")
+        bal = data.get("balance")
+        if isinstance(bal, (int, float)):
+            _sound_balance_history.append((time.time(), float(bal)))
     elif name == "state_changed":
         # Phase 4 — track the firmware's high-level State so consumers can gate
         # behaviour on it (e.g. greeter skips during security; ambient awareness
@@ -5046,6 +5065,7 @@ if _configure_dashboard is not None:
         perception_recent_getter=get_recent_perception,
         identity_display_name=_identity_display_name,
         last_user_line_getter=_get_last_user_line,
+        sound_balance_getter=_sound_balance_series,
     )
 
 
