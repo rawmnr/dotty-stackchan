@@ -182,6 +182,9 @@ XIAOZHI_OTA_PORT = int(os.environ.get("XIAOZHI_OTA_PORT", "8003"))
 XIAOZHI_WS_PORT = int(os.environ.get("XIAOZHI_WS_PORT", "8000"))
 LOG_DIR = Path(os.environ.get("CONVO_LOG_DIR", "/root/zeroclaw-bridge/logs"))
 VOICE_CHANNELS = ("dotty", "stackchan")
+# #64 — the zeroclaw-discord daemon's systemd unit. It runs on the same
+# RPi as the bridge, so its status is a local `systemctl` query.
+DISCORD_UNIT = os.environ.get("ZEROCLAW_DISCORD_UNIT", "zeroclaw-discord")
 
 _START_TIME = time.time()
 
@@ -808,6 +811,49 @@ async def state_partial(request: Request) -> Any:
             "sound_spark": _sound_balance_sparkline(),
         },
     )
+
+
+def _discord_unit_status() -> dict[str, Any]:
+    """#64 — query the zeroclaw-discord systemd unit. The Discord daemon
+    runs on the same RPi as the bridge, so `systemctl` is a local call
+    with no SSH. Read-only `systemctl show` — works without root."""
+    import subprocess
+    ctx: dict[str, Any] = {"unit": DISCORD_UNIT, "available": False}
+    try:
+        out = subprocess.run(
+            ["systemctl", "show", DISCORD_UNIT, "--no-pager",
+             "--property=LoadState,ActiveState,SubState,ActiveEnterTimestamp"],
+            capture_output=True, text=True, timeout=3,
+        )
+    except Exception:
+        return ctx
+    if out.returncode != 0:
+        return ctx
+    props: dict[str, str] = {}
+    for line in out.stdout.splitlines():
+        if "=" in line:
+            key, val = line.split("=", 1)
+            props[key] = val
+    if props.get("LoadState") == "not-found":
+        ctx["not_found"] = True
+        return ctx
+    active = props.get("ActiveState", "unknown")
+    ctx.update({
+        "available": True,
+        "active_state": active,
+        "sub_state": props.get("SubState", ""),
+        "since": props.get("ActiveEnterTimestamp", ""),
+        "running": active == "active",
+        "failed": active == "failed",
+    })
+    return ctx
+
+
+@router.get("/discord", response_class=HTMLResponse, include_in_schema=False)
+async def discord_partial(request: Request) -> Any:
+    """zeroclaw-discord daemon health card (#64)."""
+    ctx = await asyncio.to_thread(_discord_unit_status)
+    return templates.TemplateResponse(request, "discord.html", ctx)
 
 
 @router.post("/actions/state", response_class=HTMLResponse, include_in_schema=False)
