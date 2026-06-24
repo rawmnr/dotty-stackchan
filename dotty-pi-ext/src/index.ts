@@ -9,6 +9,7 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { logTurnEnd } from "./lib/turn_logger.ts";
+import { withToolGuardrails } from "./lib/tool_guardrails.ts";
 import { memoryLookupTool } from "./tools/memory_lookup.ts";
 import { playSongTool } from "./tools/play_song.ts";
 import { recallPersonTool } from "./tools/recall_person.ts";
@@ -18,13 +19,13 @@ import { takePhotoTool } from "./tools/take_photo.ts";
 import { thinkHardTool } from "./tools/think_hard.ts";
 
 export default function (pi: ExtensionAPI) {
-  pi.registerTool(memoryLookupTool);
-  pi.registerTool(recallPersonTool);
-  pi.registerTool(rememberTool);
-  pi.registerTool(rememberPersonTool);
-  pi.registerTool(thinkHardTool);
-  pi.registerTool(playSongTool);
-  pi.registerTool(takePhotoTool);
+  pi.registerTool(withToolGuardrails(memoryLookupTool));
+  pi.registerTool(withToolGuardrails(recallPersonTool));
+  pi.registerTool(withToolGuardrails(rememberTool));
+  pi.registerTool(withToolGuardrails(rememberPersonTool));
+  pi.registerTool(withToolGuardrails(thinkHardTool));
+  pi.registerTool(withToolGuardrails(playSongTool));
+  pi.registerTool(withToolGuardrails(takePhotoTool));
   // Per-turn conversation auto-log. This is the live write path on the
   // PiVoiceLLM voice path (the old bridge.py /api/voice/memory_log endpoint
   // was retired with the #36 cutover).
