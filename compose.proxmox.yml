@@ -1,0 +1,124 @@
+services:
+  xiaozhi-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rawmlab-xiaozhi-esp32-server:local
+    container_name: xiaozhi-esp32-server
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      VISION_BRIDGE_URL: http://${DOTTY_HOST_LAN_IP}:8090
+      PERSONA: rawmlab_homelab
+      DOTTY_KID_MODE_STATE: /var/lib/dotty/state/kid-mode
+      DOTTY_SMART_MODE_STATE: /var/lib/dotty/state/smart-mode
+      DOTTY_ADMIN_TOKEN: ${DOTTY_ADMIN_TOKEN:-}
+    ports:
+      - "8000:8000"
+      - "8003:8003"
+    volumes:
+      - ${DOTTY_CONFIG_PATH:-./data/.config.yaml}:/opt/xiaozhi-esp32-server/data/.config.yaml:ro
+      - ${DOTTY_SENSEVOICE_MODEL_DIR:-./models/SenseVoiceSmall}:/opt/xiaozhi-esp32-server/models/SenseVoiceSmall
+      - ${DOTTY_TMP_DIR:-./runtime/xiaozhi/tmp}:/opt/xiaozhi-esp32-server/tmp
+      - ./custom-providers/openai_compat:/opt/xiaozhi-esp32-server/core/providers/llm/openai_compat
+      - ./custom-providers/pi_voice:/opt/xiaozhi-esp32-server/core/providers/llm/pi_voice
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker:ro
+      - ./personas:/opt/xiaozhi-esp32-server/personas:ro
+      - ./custom-providers/edge_stream/edge_stream.py:/opt/xiaozhi-esp32-server/core/providers/tts/edge_stream.py:ro
+      - ./custom-providers/piper_local/piper_local.py:/opt/xiaozhi-esp32-server/core/providers/tts/piper_local.py:ro
+      - ${DOTTY_PIPER_MODEL_DIR:-./models/piper}:/opt/xiaozhi-esp32-server/models/piper:ro
+      - ./custom-providers/asr/fun_local.py:/opt/xiaozhi-esp32-server/core/providers/asr/fun_local.py:ro
+      - ./custom-providers/asr/whisper_local.py:/opt/xiaozhi-esp32-server/core/providers/asr/whisper_local.py:ro
+      - ${DOTTY_WHISPER_MODEL_DIR:-./models/whisper-small.en-ct2}:/opt/xiaozhi-esp32-server/models/whisper-small.en-ct2:ro
+      - ./receiveAudioHandle.py:/opt/xiaozhi-esp32-server/core/handle/receiveAudioHandle.py:ro
+      - ./dances.py:/opt/xiaozhi-esp32-server/core/handle/dances.py:ro
+      - ./custom-providers/textUtils.py:/opt/xiaozhi-esp32-server/core/utils/textUtils.py:ro
+      - ./songs:/opt/xiaozhi-esp32-server/config/assets/songs:ro
+      - ./custom-providers/xiaozhi-patches/portal_bridge.py:/opt/xiaozhi-esp32-server/core/portal_bridge.py:ro
+      - ./custom-providers/xiaozhi-patches/websocket_server.py:/opt/xiaozhi-esp32-server/core/websocket_server.py:ro
+      - ./custom-providers/xiaozhi-patches/http_server.py:/opt/xiaozhi-esp32-server/core/http_server.py:ro
+      - ./custom-providers/xiaozhi-patches/textMessageHandlerRegistry.py:/opt/xiaozhi-esp32-server/core/handle/textMessageHandlerRegistry.py:ro
+      - ./custom-providers/xiaozhi-patches/ota_handler.py:/opt/xiaozhi-esp32-server/core/api/ota_handler.py:ro
+      - ${DOTTY_BIN_DIR:-./runtime/xiaozhi/bin}:/opt/xiaozhi-esp32-server/data/bin
+      - ${DOTTY_SHARED_STATE_DIR:-./runtime/shared-state}:/var/lib/dotty/state
+
+  dotty-pi:
+    build:
+      context: ./dotty-pi
+      dockerfile: Dockerfile
+    image: rawmlab-dotty-pi:local
+    container_name: dotty-pi
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      DOTTY_ADMIN_TOKEN: ${DOTTY_ADMIN_TOKEN:-}
+      HOME_ASSISTANT_ENABLED: ${HOME_ASSISTANT_ENABLED:-false}
+      HOME_ASSISTANT_BASE_URL: ${HOME_ASSISTANT_BASE_URL:-}
+      HOME_ASSISTANT_TOKEN: ${HOME_ASSISTANT_TOKEN:-}
+      HOME_ASSISTANT_TIMEOUT_SECONDS: ${HOME_ASSISTANT_TIMEOUT_SECONDS:-10}
+      HOME_ASSISTANT_CONFIG_PATH: /root/.pi/home_assistant.json
+      XIAOZHI_HOST: 127.0.0.1
+      XIAOZHI_HTTP_PORT: 8003
+    volumes:
+      - ${DOTTY_PI_STATE_DIR:-./runtime/dotty-pi}:/root/.pi
+    command: ["sleep", "infinity"]
+
+  dotty-behaviour:
+    build:
+      context: ./dotty-behaviour
+      dockerfile: Dockerfile
+    image: rawmlab-dotty-behaviour:local
+    container_name: dotty-behaviour
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      DOTTY_BEHAVIOUR_PORT: 8090
+      XIAOZHI_HOST: 127.0.0.1
+      XIAOZHI_OTA_PORT: 8003
+      NARRATIVE_LLM_URL: ${NARRATIVE_LLM_URL:-http://127.0.0.1:8080/v1}
+      NARRATIVE_MODEL: ${NARRATIVE_MODEL:-qwen3.6:27b-think}
+      NARRATIVE_TIMEOUT_SEC: ${NARRATIVE_TIMEOUT_SEC:-90}
+      DOTTY_ADMIN_TOKEN: ${DOTTY_ADMIN_TOKEN:-}
+      CONVO_LOG_DIR: /var/lib/dotty-behaviour/logs
+      DOTTY_STATE_DIR: /var/lib/dotty-behaviour/state
+      HOUSEHOLD_YAML_PATH: /var/lib/dotty-behaviour/state/household.yaml
+      GREETER_STATE_PATH: /var/lib/dotty-behaviour/state/greeter_state.json
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      VISION_API_KEY: ${VISION_API_KEY:-}
+      VLM_API_KEY: ${VLM_API_KEY:-}
+    volumes:
+      - ${DOTTY_SHARED_STATE_DIR:-./runtime/shared-state}:/var/lib/dotty-behaviour/state
+      - ${DOTTY_BEHAVIOUR_LOG_DIR:-./runtime/dotty-behaviour/logs}:/var/lib/dotty-behaviour/logs
+      - ${DOTTY_BEHAVIOUR_SECRETS_DIR:-./runtime/dotty-behaviour/secrets}:/var/lib/dotty-behaviour/secrets:ro
+
+  dotty-bridge:
+    build:
+      context: .
+      dockerfile: bridge/Dockerfile
+      args:
+        BRIDGE_VERSION: proxmox-local
+    image: rawmlab-dotty-bridge:local
+    container_name: dotty-bridge
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      PORT: 8081
+      PYTHONUNBUFFERED: 1
+      XIAOZHI_HOST: 127.0.0.1
+      XIAOZHI_OTA_PORT: 8003
+      DOTTY_ADMIN_TOKEN: ${DOTTY_ADMIN_TOKEN:-}
+      DOTTY_KID_MODE_STATE: /var/lib/dotty-bridge/state/kid-mode
+      DOTTY_SMART_MODE_STATE: /var/lib/dotty-bridge/state/smart-mode
+      CONVO_LOG_DIR: /var/lib/dotty-bridge/logs
+      HOUSEHOLD_YAML_PATH: /var/lib/dotty-bridge/state/household.yaml
+      CALENDAR_SA_PATH: /var/lib/dotty-bridge/secrets/google-calendar-sa.json
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      VISION_API_KEY: ${VISION_API_KEY:-}
+      VLM_API_KEY: ${VLM_API_KEY:-}
+    volumes:
+      - ${DOTTY_SHARED_STATE_DIR:-./runtime/shared-state}:/var/lib/dotty-bridge/state
+      - ${DOTTY_BRIDGE_LOG_DIR:-./runtime/dotty-bridge/logs}:/var/lib/dotty-bridge/logs
+      - ${DOTTY_BRIDGE_SECRETS_DIR:-./runtime/dotty-bridge/secrets}:/var/lib/dotty-bridge/secrets:ro
