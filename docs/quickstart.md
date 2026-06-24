@@ -269,7 +269,7 @@ curl http://<XIAOZHI_HOST>:8081/health
 ```
 
 ### Changing voice
-The default TTS is `LocalPiper` (offline, runs inside the container). To change the Piper voice, edit `TTS.LocalPiper.voice` and the corresponding `model_path` / `config_path` in `data/.config.yaml`. To switch to cloud EdgeTTS instead, set `selected_module.TTS: EdgeTTS` and edit `TTS.EdgeTTS.voice` (any Microsoft Edge Neural voice ID works, e.g. `en-US-AvaNeural`). Restart the container after changes.
+The default TTS is `LocalPiper` (offline, runs inside the container). In this Rawmlab fork the default local voice is `fr_FR-upmc-medium`. To change the Piper voice, edit `TTS.LocalPiper.voice` and the corresponding `model_path` / `config_path` in `data/.config.yaml`. To switch to cloud EdgeTTS instead, set `selected_module.TTS: EdgeTTS` and edit `TTS.EdgeTTS.voice`. Restart the container after changes.
 
 ### Changing persona (the robot's personality)
 Edit `personas/dotty_voice.md` (loaded by the pi agent on the `PiVoiceLLM` path) and restart the relevant container. The `prompt:` key in `data/.config.yaml` is also injected as a secondary system message. Full instructions: [cookbook/change-persona.md](cookbook/change-persona.md).

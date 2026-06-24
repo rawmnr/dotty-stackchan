@@ -17,7 +17,7 @@ you:
 
 ```bash
 make voice-list                                       # see the catalog
-make voice-install VOICE=en_US-kristin-medium APPLY=1
+make voice-install VOICE=fr_FR-upmc-medium APPLY=1
 docker compose restart xiaozhi-server
 ```
 
@@ -33,7 +33,9 @@ selected_module:
   TTS: LocalPiper
 TTS:
   LocalPiper:
-    model_path: models/piper/en_US-lessac-medium.onnx
+    voice: fr_FR-upmc-medium
+    model_path: /opt/xiaozhi-esp32-server/models/piper/fr_FR-upmc-medium.onnx
+    config_path: /opt/xiaozhi-esp32-server/models/piper/fr_FR-upmc-medium.onnx.json
 ```
 
 3. Restart: `docker compose restart xiaozhi-server`
@@ -57,5 +59,5 @@ TTS:
 
 - Piper is fully offline with no latency jitter. Prefer it for reliability.
 - EdgeTTS has more variety but needs internet and occasionally throttles.
-- **English voices only** -- non-English voices produce empty audio. See
-  [voice-pipeline.md](../voice-pipeline.md).
+- Piper supports non-English voices as long as the selected model matches the target language.
+- If Piper sounds wrong or fails, switch temporarily to `EdgeTTS` or `StreamingEdgeTTS` as the fallback path.

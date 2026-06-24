@@ -69,7 +69,7 @@ The first recommended fork-specific activation path is:
 2. Copy `.config.yaml.template` to `data/.config.yaml`.
 3. Set `selected_module.LLM` to `OpenAICompat` if you want a simple OpenRouter-backed MVP.
 4. Set `LLM.OpenAICompat.persona_file` to `personas/rawmlab_homelab.md`.
-5. Keep `selected_module.TTS: LocalPiper` and swap the voice model to a French Piper voice when ready.
+5. Keep `selected_module.TTS: LocalPiper`; this fork now defaults to `fr_FR-upmc-medium` for local French TTS.
 
 See also: [cookbook/rawmlab-openrouter.md](./cookbook/rawmlab-openrouter.md) for the shortest OpenRouter-backed MVP path.
 

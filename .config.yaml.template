@@ -94,9 +94,9 @@ TTS:
     output_dir: tmp/
   LocalPiper:
     type: piper_local
-    voice: en_GB-cori-medium
-    model_path: /opt/xiaozhi-esp32-server/models/piper/en_GB-cori-medium.onnx
-    config_path: /opt/xiaozhi-esp32-server/models/piper/en_GB-cori-medium.onnx.json
+    voice: fr_FR-upmc-medium
+    model_path: /opt/xiaozhi-esp32-server/models/piper/fr_FR-upmc-medium.onnx
+    config_path: /opt/xiaozhi-esp32-server/models/piper/fr_FR-upmc-medium.onnx.json
     output_dir: tmp/
 
 LLM:

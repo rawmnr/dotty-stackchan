@@ -8,6 +8,10 @@
 #
 # Lines starting with # and blank lines are ignored.
 
+fr_FR-upmc-medium                   fr/fr_FR/upmc/medium
+fr_FR-siwis-medium                  fr/fr_FR/siwis/medium
+fr_FR-tom-medium                    fr/fr_FR/tom/medium
+fr_FR-gilles-low                    fr/fr_FR/gilles/low
 en_US-amy-medium                    en/en_US/amy/medium
 en_US-amy-low                       en/en_US/amy/low
 en_US-kristin-medium                en/en_US/kristin/medium

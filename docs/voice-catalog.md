@@ -6,9 +6,9 @@ description: Curated Piper and EdgeTTS voices that suit a Dotty-class kid-friend
 # Voice Catalog
 
 A short, curated list of TTS voices that play well with Dotty's persona —
-warm, cheerful, easy on the ear at low volume on a tiny speaker. The full
-upstream catalogues are huge; this page is the opinionated subset we've
-actually listened to and like.
+or, on the Rawmlab fork, a short French-speaking HomeLab assistant. The full
+upstream catalogues are huge; this page is the opinionated subset worth trying
+first.
 
 For instructions on switching, see [Swap Voice](cookbook/swap-voice.md).
 For an automated download of any Piper voice listed below, see the
@@ -31,6 +31,10 @@ needed.
 
 | Key                              | Lang   | Quality | Character           | Best for      | Size  |
 |----------------------------------|--------|---------|---------------------|---------------|-------|
+| `fr_FR-upmc-medium`              | fr_FR  | medium  | Neutral, clear FR   | Rawmlab default | ~77 MB |
+| `fr_FR-siwis-medium`             | fr_FR  | medium  | Softer FR           | Adult FR      | ~63 MB |
+| `fr_FR-tom-medium`               | fr_FR  | medium  | Brighter FR         | Adult FR      | ~64 MB |
+| `fr_FR-gilles-low`               | fr_FR  | low     | Lightweight FR      | Low-RAM FR    | ~28 MB |
 | `en_US-amy-medium`               | en_US  | medium  | Warm, friendly      | Kid + Adult   | ~63 MB |
 | `en_US-amy-low`                  | en_US  | low     | Warm, friendly      | Kid + Adult   | ~28 MB |
 | `en_US-kristin-medium`           | en_US  | medium  | Cheerful, bright    | Kid Mode      | ~63 MB |
@@ -44,8 +48,14 @@ needed.
 | `en_GB-alba-medium`              | en_GB  | medium  | Scottish, cosy      | Both          | ~63 MB |
 | `en_GB-semaine-medium`           | en_GB  | medium  | Neutral UK          | Adult         | ~63 MB |
 
-The default voice that ships with `make fetch-models` is
-`en_GB-cori-medium` — a safe, friendly starting point.
+The default voice that ships with `make fetch-models` in this Rawmlab fork is
+`fr_FR-upmc-medium` — a pragmatic French starting point for local TTS.
+
+French-voice notes:
+
+- `fr_FR-upmc-medium` is a good first pick for clarity on a small speaker.
+- `fr_FR-siwis-medium` is worth trying if `upmc` sounds too dry.
+- `fr_FR-tom-medium` exists, but its upstream dataset license is less convenient for redistribution than `upmc`.
 
 ### Notes on quality tiers
 
@@ -103,9 +113,9 @@ selected_module:
   TTS: LocalPiper
 TTS:
   LocalPiper:
-    voice: en_US-kristin-medium
-    model_path: /opt/xiaozhi-esp32-server/models/piper/en_US-kristin-medium.onnx
-    config_path: /opt/xiaozhi-esp32-server/models/piper/en_US-kristin-medium.onnx.json
+    voice: fr_FR-upmc-medium
+    model_path: /opt/xiaozhi-esp32-server/models/piper/fr_FR-upmc-medium.onnx
+    config_path: /opt/xiaozhi-esp32-server/models/piper/fr_FR-upmc-medium.onnx.json
 ```
 
 Then `docker compose restart xiaozhi-server`.
