@@ -10,6 +10,7 @@ Config lives in .config.yaml under LLM.OpenAICompat — see the repo's
 import json
 import os
 import time
+from urllib.parse import urlsplit, urlunsplit
 
 import requests
 
@@ -28,6 +29,27 @@ logger = setup_logging()
 
 KID_MODE = os.environ.get("DOTTY_KID_MODE", "true").lower() in ("1", "true", "yes")
 _TURN_SUFFIX = build_turn_suffix(KID_MODE)
+
+
+def _env_true(value):
+    return str(value or "").lower() in ("1", "true", "yes", "on")
+
+
+def _safe_turn_component(value):
+    text = str(value or "sessionless").strip()
+    return "".join(ch if ch.isalnum() or ch in ("-", "_", ".") else "_" for ch in text) or "sessionless"
+
+
+def _sanitized_url(url):
+    parts = urlsplit(url or "")
+    netloc = parts.hostname or ""
+    if parts.port:
+        netloc = f"{netloc}:{parts.port}"
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
+
+def _elapsed_ms(start):
+    return int(round((time.perf_counter() - start) * 1000))
 
 
 def _load_persona(path):
@@ -71,6 +93,7 @@ class LLMProvider(LLMProviderBase):
         self.max_tokens = int(config.get("max_tokens", 256))
         self.temperature = float(config.get("temperature", 0.7))
         self.timeout = float(config.get("timeout", 60))
+        self._turn_seq = 0
 
         # Load persona from file, fall back to inline system_prompt, then to
         # empty string (the top-level .config.yaml prompt: block will still be
@@ -280,16 +303,34 @@ class LLMProvider(LLMProviderBase):
         and preserves — the leading-emoji contract.
         """
         start = time.perf_counter()
+        self._turn_seq += 1
+        turn_id = f"{_safe_turn_component(session_id)}-{self._turn_seq}"
+        debug = _env_true(os.environ.get("DOTTY_VOICE_DEBUG"))
         messages = self._build_messages(dialogue)
         chunk_count = 0
         char_count = 0
         outcome = "ok"
+        first_chunk_ms = None
+        logger.bind(tag=TAG).info(
+            "OpenAICompat turn "
+            f"turn_id={turn_id} stage=turn_start session_id={session_id!r} "
+            f"dialogue_messages={len(dialogue)} prompt_messages={len(messages)} "
+            f"debug={'true' if debug else 'false'} "
+            f"url={_sanitized_url(self.base_url)!r}"
+        )
         try:
             for chunk in filter_tts_stream(
                 self._response_stream(messages),
                 KID_MODE,
                 on_hit=self._on_filter_hit,
             ):
+                if first_chunk_ms is None:
+                    first_chunk_ms = _elapsed_ms(start)
+                    logger.bind(tag=TAG).info(
+                        "OpenAICompat turn "
+                        f"turn_id={turn_id} stage=llm_first_chunk "
+                        f"duration_ms={first_chunk_ms}"
+                    )
                 chunk_count += 1
                 char_count += len(chunk)
                 yield chunk
@@ -297,10 +338,15 @@ class LLMProvider(LLMProviderBase):
             outcome = "error"
             raise
         finally:
-            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            elapsed_ms = _elapsed_ms(start)
             logger.bind(tag=TAG).info(
-                "OpenAICompat response complete "
-                f"model={self.model!r} url={self.base_url!r} "
+                "OpenAICompat turn "
+                f"turn_id={turn_id} stage=llm_complete model={self.model!r} "
                 f"session_id={session_id!r} chunks={chunk_count} chars={char_count} "
-                f"elapsed_ms={elapsed_ms} outcome={outcome}"
+                f"duration_ms={elapsed_ms} outcome={outcome}"
+            )
+            logger.bind(tag=TAG).info(
+                "OpenAICompat turn "
+                f"turn_id={turn_id} stage=total duration_ms={elapsed_ms} "
+                f"outcome={outcome}"
             )

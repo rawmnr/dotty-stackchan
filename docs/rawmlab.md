@@ -74,6 +74,7 @@ The first recommended fork-specific activation path is:
 See also: [cookbook/rawmlab-openrouter.md](./cookbook/rawmlab-openrouter.md) for the shortest OpenRouter-backed MVP path.
 See also: [cookbook/rawmlab-stt-fr.md](./cookbook/rawmlab-stt-fr.md) for the French STT baseline.
 See also: [cookbook/rawmlab-tool-guardrails.md](./cookbook/rawmlab-tool-guardrails.md) for the current voice-tool security policy.
+See also: [cookbook/rawmlab-observability.md](./cookbook/rawmlab-observability.md) for the current voice-turn diagnostics.
 
 ## Scope boundary
 

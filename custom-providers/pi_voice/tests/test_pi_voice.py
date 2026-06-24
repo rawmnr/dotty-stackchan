@@ -19,11 +19,13 @@ sys.path.insert(0, PROVIDER_DIR)
 sys.path.insert(0, CUSTOM_PROVIDERS_DIR)
 
 import textUtils  # noqa: E402
+import pi_voice.pi_voice as _mod  # noqa: E402
 # Import via the pi_voice package, not the top-level pi_client module —
 # pi_voice catches pi_voice.pi_client.PiClientError, and `from pi_client
 # import PiClientError` would give us a *different* class object even
 # though the source is identical, so isinstance/except wouldn't match.
 from pi_voice import LLMProvider, PiClientError, _wrap_with_sandwich  # noqa: E402
+from unittest.mock import MagicMock, patch
 
 
 class FakeClient:
@@ -127,6 +129,51 @@ class TestErrorFallback(unittest.TestCase):
         provider = LLMProvider({}, client=client)  # type: ignore[arg-type]
         out = list(provider.response("s", [{"role": "user", "content": "anything"}]))
         self.assertEqual(out, ["(brain offline — try again in a moment)"])
+
+
+class TestObservabilityLogging(unittest.TestCase):
+    def test_structured_turn_logs_include_turn_id_and_total(self):
+        os.environ["DOTTY_KID_MODE"] = "true"
+        os.environ.pop("DOTTY_VOICE_DEBUG", None)
+        client = FakeClient()
+        client.script_turn(["Hello", " world"])
+        fake_logger = MagicMock()
+        fake_logger.bind.return_value = fake_logger
+        fake_clock = iter([10.0, 10.12, 10.4])
+
+        with patch.object(_mod, "logger", fake_logger), \
+             patch.object(_mod.time, "perf_counter", side_effect=lambda: next(fake_clock)):
+            provider = LLMProvider({}, client=client)  # type: ignore[arg-type]
+            out = list(provider.response("sess-42", [{"role": "user", "content": "bonjour"}]))
+
+        self.assertEqual("".join(out), "Hello world")
+        messages = [call.args[0] for call in fake_logger.info.call_args_list]
+        self.assertTrue(any("stage=turn_start" in msg for msg in messages))
+        self.assertTrue(any("turn_id=sess-42-1 stage=llm_first_chunk duration_ms=120" in msg for msg in messages))
+        self.assertTrue(any("turn_id=sess-42-1 stage=llm_complete" in msg and "chunks=1" in msg and "chars=11" in msg for msg in messages))
+        self.assertTrue(any("turn_id=sess-42-1 stage=total duration_ms=400 outcome=ok" in msg for msg in messages))
+
+    def test_debug_mode_logs_prompt_metadata_without_prompt_text(self):
+        os.environ["DOTTY_KID_MODE"] = "false"
+        os.environ["DOTTY_VOICE_DEBUG"] = "true"
+        client = FakeClient()
+        client.script_turn(["🙂 ok"])
+        fake_logger = MagicMock()
+        fake_logger.bind.return_value = fake_logger
+        fake_clock = iter([20.0, 20.05, 20.1])
+
+        with patch.object(_mod, "logger", fake_logger), \
+             patch.object(_mod.time, "perf_counter", side_effect=lambda: next(fake_clock)):
+            provider = LLMProvider({}, client=client)  # type: ignore[arg-type]
+            list(provider.response("sess-debug", [{"role": "user", "content": "secret prompt"}]))
+
+        messages = [call.args[0] for call in fake_logger.info.call_args_list]
+        debug_msgs = [msg for msg in messages if "stage=turn_start" in msg]
+        self.assertEqual(len(debug_msgs), 1)
+        self.assertIn("debug=true", debug_msgs[0])
+        self.assertIn("user_chars=13", debug_msgs[0])
+        self.assertIn("prompt_chars=", debug_msgs[0])
+        self.assertNotIn("secret prompt", debug_msgs[0])
 
 
 if __name__ == "__main__":

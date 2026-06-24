@@ -185,14 +185,14 @@ class TestStreamEmojiOrdering(unittest.TestCase):
 
 class TestResponseMetricsLogging(unittest.TestCase):
 
-    def test_success_logs_model_and_elapsed_ms(self):
+    def test_success_logs_turn_id_and_stage_timings(self):
         resp = MagicMock()
         resp.raise_for_status = MagicMock()
         resp.iter_lines = lambda decode_unicode=True: iter(_sse("Hello there."))
         provider = _provider()
         fake_logger = MagicMock()
         fake_logger.bind.return_value = fake_logger
-        fake_clock = iter([10.0, 10.25])
+        fake_clock = iter([10.0, 10.08, 10.25])
 
         with patch.object(_mod.requests, "post", return_value=resp), \
              patch.object(_mod, "logger", fake_logger), \
@@ -200,12 +200,11 @@ class TestResponseMetricsLogging(unittest.TestCase):
             out = list(provider.response("sess-1", [{"role": "user", "content": "hi"}]))
 
         self.assertTrue("".join(out).startswith(_FALLBACK))
-        fake_logger.info.assert_called_once()
-        msg = fake_logger.info.call_args[0][0]
-        self.assertIn("model='m'", msg)
-        self.assertIn("session_id='sess-1'", msg)
-        self.assertIn("elapsed_ms=250", msg)
-        self.assertIn("outcome=ok", msg)
+        messages = [call.args[0] for call in fake_logger.info.call_args_list]
+        self.assertTrue(any("turn_id=sess-1-1 stage=turn_start" in msg for msg in messages))
+        self.assertTrue(any("turn_id=sess-1-1 stage=llm_first_chunk duration_ms=80" in msg for msg in messages))
+        self.assertTrue(any("turn_id=sess-1-1 stage=llm_complete" in msg and "model='m'" in msg and "chunks=2" in msg for msg in messages))
+        self.assertTrue(any("turn_id=sess-1-1 stage=total duration_ms=250 outcome=ok" in msg for msg in messages))
 
     def test_exception_logs_outcome_error(self):
         provider = _provider()
@@ -223,9 +222,32 @@ class TestResponseMetricsLogging(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 list(provider.response("sess-err", [{"role": "user", "content": "hi"}]))
 
-        fake_logger.info.assert_called_once()
-        msg = fake_logger.info.call_args[0][0]
-        self.assertIn("outcome=error", msg)
+        messages = [call.args[0] for call in fake_logger.info.call_args_list]
+        self.assertTrue(any("turn_id=sess-err-1 stage=total duration_ms=50 outcome=error" in msg for msg in messages))
+
+    def test_debug_mode_logs_metadata_without_url_query_or_prompt(self):
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.iter_lines = lambda decode_unicode=True: iter(_sse("Hello"))
+        provider = _mod.LLMProvider({"url": "http://x/v1?api_key=secret", "model": "m"})
+        fake_logger = MagicMock()
+        fake_logger.bind.return_value = fake_logger
+        fake_clock = iter([30.0, 30.02, 30.05])
+
+        with patch.dict(_mod.os.environ, {"DOTTY_VOICE_DEBUG": "true"}, clear=False), \
+             patch.object(_mod.requests, "post", return_value=resp), \
+             patch.object(_mod, "logger", fake_logger), \
+             patch.object(_mod.time, "perf_counter", side_effect=lambda: next(fake_clock)):
+            list(provider.response("sess-debug", [{"role": "user", "content": "secret prompt"}]))
+
+        messages = [call.args[0] for call in fake_logger.info.call_args_list]
+        start = [msg for msg in messages if "stage=turn_start" in msg]
+        self.assertEqual(len(start), 1)
+        self.assertIn("debug=true", start[0])
+        self.assertIn("dialogue_messages=1", start[0])
+        self.assertIn("url='http://x/v1'", start[0])
+        self.assertNotIn("api_key=secret", start[0])
+        self.assertNotIn("secret prompt", start[0])
 
 
 if __name__ == "__main__":

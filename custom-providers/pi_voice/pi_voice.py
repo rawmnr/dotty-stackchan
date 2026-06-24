@@ -34,6 +34,7 @@ LLM:
 from __future__ import annotations
 
 import os
+import time
 from typing import Iterator
 
 from .pi_client import PiClient, PiClientError, make_default_pi_client
@@ -85,6 +86,19 @@ def _read_kid_mode() -> bool:
     return os.environ.get("DOTTY_KID_MODE", "true").lower() in ("1", "true", "yes")
 
 
+def _read_debug_mode() -> bool:
+    return os.environ.get("DOTTY_VOICE_DEBUG", "false").lower() in ("1", "true", "yes", "on")
+
+
+def _safe_turn_component(value) -> str:
+    text = str(value or "sessionless").strip()
+    return "".join(ch if ch.isalnum() or ch in ("-", "_", ".") else "_" for ch in text) or "sessionless"
+
+
+def _elapsed_ms(start: float) -> int:
+    return int(round((time.perf_counter() - start) * 1000))
+
+
 def _last_user_text(dialogue: list[dict]) -> str:
     """Find the most recent user-turn content. xiaozhi's dialogue is a
     list of {role, content} dicts in chronological order; the last user
@@ -120,6 +134,7 @@ class LLMProvider(LLMProviderBase):
         # the env-configured default.
         self._client: PiClient = client if client is not None else make_default_pi_client()
         self._first_turn = True
+        self._turn_seq = 0
         msg = f"PiVoiceLLM ready (container={self._container} kid_mode={self._kid_mode})"
         try:
             logger.bind(tag=TAG).info(msg)  # type: ignore[attr-defined]
@@ -129,21 +144,41 @@ class LLMProvider(LLMProviderBase):
     # xiaozhi-server's voice loop calls this as a sync generator.
     # Each yielded string becomes a TTS chunk.
     def response(self, session_id, dialogue, **kwargs) -> Iterator[str]:
+        self._turn_seq += 1
+        turn_id = f"{_safe_turn_component(session_id)}-{self._turn_seq}"
+        start = time.perf_counter()
         user_text = _last_user_text(dialogue)
         if not user_text:
             yield "(empty turn)"
             return
         prompt = _wrap_with_sandwich(user_text, self._kid_mode)
+        debug = _read_debug_mode()
+        logger.info(
+            "PiVoiceLLM turn "
+            f"turn_id={turn_id} stage=turn_start session_id={session_id!r} "
+            f"user_chars={len(user_text)} prompt_chars={len(prompt)} "
+            f"debug={'true' if debug else 'false'}"
+        )
 
         # Reset pi state between voice turns. First turn skips this —
         # the freshly-spawned process is already clean.
         if not self._first_turn:
+            ns_start = time.perf_counter()
             try:
                 self._client.new_session()
+                logger.info(
+                    "PiVoiceLLM turn "
+                    f"turn_id={turn_id} stage=new_session "
+                    f"duration_ms={_elapsed_ms(ns_start)}"
+                )
             except PiClientError:
                 logger.exception("PiVoiceLLM: new_session failed, continuing")
         self._first_turn = False
 
+        chunk_count = 0
+        char_count = 0
+        first_chunk_ms = None
+        outcome = "ok"
         try:
             # #157: kid-mode blocked-content filter on TTS-bound output.
             # Sentence-buffered — nothing reaches TTS before its sentence is
@@ -154,12 +189,34 @@ class LLMProvider(LLMProviderBase):
                 self._kid_mode,
                 on_hit=self._on_filter_hit,
             ):
+                if first_chunk_ms is None:
+                    first_chunk_ms = _elapsed_ms(start)
+                    logger.info(
+                        "PiVoiceLLM turn "
+                        f"turn_id={turn_id} stage=llm_first_chunk "
+                        f"duration_ms={first_chunk_ms}"
+                    )
+                chunk_count += 1
+                char_count += len(chunk)
                 yield chunk
         except PiClientError as exc:
+            outcome = "error"
             logger.error("PiVoiceLLM turn failed: %s", exc)
             for line in self._client.recent_stderr()[-5:]:
                 logger.error("  pi.stderr: %s", line)
             yield "(brain offline — try again in a moment)"
+        finally:
+            elapsed_ms = _elapsed_ms(start)
+            logger.info(
+                "PiVoiceLLM turn "
+                f"turn_id={turn_id} stage=llm_complete chunks={chunk_count} "
+                f"chars={char_count} duration_ms={elapsed_ms} outcome={outcome}"
+            )
+            logger.info(
+                "PiVoiceLLM turn "
+                f"turn_id={turn_id} stage=total duration_ms={elapsed_ms} "
+                f"outcome={outcome}"
+            )
 
     def _on_filter_hit(self, tier: str, match) -> None:
         # Local logging only — the Prometheus counter / safety ring live in
