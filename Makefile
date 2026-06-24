@@ -6,8 +6,8 @@ SENSEVOICE_REPO  := https://huggingface.co/FunAudioLLM/SenseVoiceSmall
 PIPER_BASE       := https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR/upmc/medium
 PIPER_ONNX       := fr_FR-upmc-medium.onnx
 PIPER_JSON       := fr_FR-upmc-medium.onnx.json
-WHISPER_REPO     := https://huggingface.co/Systran/faster-whisper-small.en
-WHISPER_DIR      := models/whisper-small.en-ct2
+WHISPER_REPO     := https://huggingface.co/Systran/faster-whisper-small
+WHISPER_DIR      := models/whisper-small-ct2
 WHISPER_FILES    := config.json model.bin tokenizer.json vocabulary.txt
 
 # ── Colours ──────────────────────────────────────────────────────────
@@ -265,9 +265,9 @@ fetch-models: ## Download SenseVoiceSmall + Piper voice models
 	  fi; \
 	done
 	@echo ""
-	@# ── faster-whisper small.en (CTranslate2) ──
+	@# ── faster-whisper small (multilingual, CTranslate2) ──
 	@mkdir -p $(WHISPER_DIR)
-	@echo -e "$(BOLD)[faster-whisper small.en]$(RESET)"
+	@echo -e "$(BOLD)[faster-whisper small]$(RESET)"
 	@$(DL_FILE); for f in $(WHISPER_FILES); do \
 	  if [ -f "$(WHISPER_DIR)/$$f" ]; then \
 	    echo -e "  $(GREEN)$$f — already exists, skipping$(RESET)"; \

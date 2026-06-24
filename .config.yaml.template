@@ -59,20 +59,21 @@ ASR:
     type: fun_local
     model_dir: models/SenseVoiceSmall
     output_dir: tmp/
-    # SenseVoiceSmall on "auto" mis-detects Korean/Japanese on short or unclear
-    # English audio. Valid values: auto, zh, en, yue (Cantonese), ja, ko, nospeech.
+    # Rawmlab fork: pin French for local French voice commands.
+    # Valid values: auto, zh, en, yue (Cantonese), ja, ko, nospeech.
+    # SenseVoice also handles French in practice, but the upstream config docs
+    # focus on the five officially-tested languages.
     # Requires the patched fun_local.py mounted via docker-compose.yml.
-    language: en
+    language: fr
   WhisperLocal:
     type: whisper_local
     # On-disk CTranslate2 model dir (downloaded by `make fetch-models`).
-    model_dir: models/whisper-small.en-ct2
+    model_dir: models/whisper-small-ct2
     output_dir: tmp/
-    # small.en is English-only — keep "en". For multilingual, use a non-.en
-    # checkpoint and set "auto" or a specific code.
-    language: en
+    # Rawmlab fork: use the multilingual small model and pin French.
+    language: fr
     # Fallback model id when model_dir is empty (faster-whisper auto-fetch).
-    model_size: small.en
+    model_size: small
     # GPU-resident on CUDA hosts; `make setup` flips these to cpu/int8 when
     # the NVIDIA Docker runtime isn't available.
     device: <ASR_DEVICE>

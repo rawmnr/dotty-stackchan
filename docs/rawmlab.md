@@ -72,6 +72,7 @@ The first recommended fork-specific activation path is:
 5. Keep `selected_module.TTS: LocalPiper`; this fork now defaults to `fr_FR-upmc-medium` for local French TTS.
 
 See also: [cookbook/rawmlab-openrouter.md](./cookbook/rawmlab-openrouter.md) for the shortest OpenRouter-backed MVP path.
+See also: [cookbook/rawmlab-stt-fr.md](./cookbook/rawmlab-stt-fr.md) for the French STT baseline.
 
 ## Scope boundary
 

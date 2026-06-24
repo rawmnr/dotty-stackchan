@@ -27,7 +27,7 @@ of which run comfortably on a modern multi-core x86-64 or Apple Silicon CPU.
 | Scenario | Needs a GPU? | Notes |
 |----------|--------------|-------|
 | **Default** (FunASR ASR + LocalPiper TTS + a **cloud** LLM via OpenRouter/OpenAI-compatible key) | No | Any 64-bit Linux/macOS host with Docker and ~4 GB free RAM. This is the Quickstart happy path. |
-| `WhisperLocal` ASR instead of FunASR | Yes | `faster-whisper` float16 needs CUDA. This is the *only* reason the Quickstart compose file carries a `runtime: nvidia` block. |
+| `WhisperLocal` ASR instead of FunASR | Yes | `faster-whisper` float16 needs CUDA. In the Rawmlab fork this uses the multilingual `small` model, pinned to French. This is the *only* reason the Quickstart compose file carries a `runtime: nvidia` block. |
 | **Self-hosting the LLM** locally (Ollama / llama-swap instead of a cloud key) | Recommended | VRAM scales with the model — roughly ~5 GB for an 8B model, ~18 GB for a 30B. See [run-fully-local.md](cookbook/run-fully-local.md) and [llama-swap-concurrent-models.md](cookbook/llama-swap-concurrent-models.md). CPU-only inference works but is slow. |
 
 **You do not have to touch the GPU config manually.** `make setup` (step 4)
@@ -218,7 +218,7 @@ Container volume mounts for `xiaozhi-esp32-server`:
 | `custom-providers/openai_compat/` | `/opt/xiaozhi-esp32-server/core/providers/llm/openai_compat/` | OpenAICompat alternate provider |
 | `custom-providers/edge_stream/edge_stream.py` | `/opt/xiaozhi-esp32-server/core/providers/tts/edge_stream.py` | Streaming EdgeTTS provider (file mount) |
 | `custom-providers/piper_local/piper_local.py` | `/opt/xiaozhi-esp32-server/core/providers/tts/piper_local.py` | Local Piper TTS provider (file mount) |
-| `custom-providers/asr/fun_local.py` | `/opt/xiaozhi-esp32-server/core/providers/asr/fun_local.py` | Patched FunASR — adds `language` config key so SenseVoiceSmall can be pinned to English |
+| `custom-providers/asr/fun_local.py` | `/opt/xiaozhi-esp32-server/core/providers/asr/fun_local.py` | Patched FunASR — adds `language` config key so SenseVoiceSmall can be pinned to French on this fork |
 
 The full file inventory lives in [architecture.md](./architecture.md#deployment-files-this-repo).
 

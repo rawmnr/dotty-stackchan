@@ -8,7 +8,7 @@ description: xiaozhi-esp32-server pipeline stages -- VAD, ASR, LLM proxy, and TT
 ## TL;DR
 
 - **Server** is `xinnan-tech/xiaozhi-esp32-server` running in Docker on a Linux host. Plugin-based: each of VAD, ASR, LLM, TTS, Memory, Intent is a swappable provider picked via `data/.config.yaml`'s `selected_module:` block.
-- Our live pipeline: **SileroVAD** (speech-end) → **FunASR SenseVoiceSmall** or **WhisperLocal** (ASR, pinned to English) → **PiVoiceLLM** custom provider (current default — `docker exec -i dotty-pi pi --mode rpc` over stdio, brain is the `dotty-pi` container) or **OpenAICompat** (alternate — points straight at any OpenAI-compatible endpoint) → **LocalPiper** en_GB-cori-medium (TTS; EdgeTTS / StreamingEdgeTTS as alternates).
+- Our live pipeline on this Rawmlab fork: **SileroVAD** (speech-end) → **FunASR SenseVoiceSmall** or **WhisperLocal** (ASR, pinned to French) → **PiVoiceLLM** custom provider (current default — `docker exec -i dotty-pi pi --mode rpc` over stdio, brain is the `dotty-pi` container) or **OpenAICompat** (alternate — points straight at any OpenAI-compatible endpoint) → **LocalPiper** `fr_FR-upmc-medium` (TTS; EdgeTTS / StreamingEdgeTTS as alternates).
 - The xiaozhi container also runs a perception relay (`EventTextMessageHandler`) that forwards firmware `face_detected` / `face_lost` / `sound_event` / `state_changed` frames to `dotty-behaviour`'s `/api/perception/event`.
 - **Emotion** is not a pipeline stage — it's extracted post-hoc from the LLM's emoji prefix and emitted as a separate WS frame. See [protocols.md](./protocols.md#emotion-protocol).
 - Custom providers are mounted into the container via Docker volumes at `/opt/xiaozhi-esp32-server/core/providers/{asr,tts,llm}/…`. They override the baked-in files at module-import time.
@@ -59,7 +59,17 @@ Model: `FunAudioLLM/SenseVoiceSmall` on HuggingFace. From the model card:
 - **70 ms to process 10 s of audio — 15× faster than Whisper-Large, 5× faster than Whisper-Small.**
 - Non-autoregressive end-to-end architecture (fast, no decode loop).
 
-**Our patch.** Upstream `fun_local.py` hardcodes `language="auto"`, which mis-detects short or unclear English as Korean or Japanese. The repo-hosted `fun_local.py` adds a `language` config key (read from `ASR.FunASR.language` in `.config.yaml`) and passes it through to `model.generate`. We set `language: en`.
+**Our patch.** Upstream `fun_local.py` hardcodes `language="auto"`, which can drift on short or unclear utterances. The repo-hosted `fun_local.py` adds a `language` config key (read from `ASR.FunASR.language` in `.config.yaml`) and passes it through to `model.generate`. On the Rawmlab fork we pin `language: fr` for the MVP.
+
+### ASR — WhisperLocal (multilingual fallback)
+
+`custom-providers/asr/whisper_local.py` wraps `faster-whisper` as a drop-in local ASR provider. On this fork the intended model is the multilingual `small` checkpoint (`Systran/faster-whisper-small`), not the English-only `small.en` variant, so French can be pinned explicitly with `language: fr`.
+
+Use WhisperLocal when:
+
+- the host has CUDA
+- French command recognition is materially better than SenseVoice on your hardware
+- you want extra ASR telemetry such as `language_probability`
 
 Deployment: mounted as a file-level override at `/opt/xiaozhi-esp32-server/core/providers/asr/fun_local.py`.
 
