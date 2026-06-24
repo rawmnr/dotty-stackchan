@@ -204,7 +204,7 @@ For hardware specs, protocol details, model internals, latent capabilities, and 
 
 ### Issue tracker
 
-Issues live as GitHub issues on `BrettKinny/dotty-stackchan` (the `origin` remote), managed via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues live as GitHub issues on `rawmnr/dotty-stackchan` (the `origin` remote), managed via the `gh` CLI. `upstream` should point at `BrettKinny/dotty-stackchan` for fork synchronization. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

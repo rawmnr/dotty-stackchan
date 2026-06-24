@@ -1,6 +1,6 @@
 # Issue tracker: GitHub
 
-Issues and PRDs for this repo live as GitHub issues on `BrettKinny/dotty-stackchan`. Use the `gh` CLI for all operations.
+Issues and PRDs for this repo live as GitHub issues on `rawmnr/dotty-stackchan`. Use the `gh` CLI for all operations.
 
 ## Conventions
 
@@ -11,7 +11,7 @@ Issues and PRDs for this repo live as GitHub issues on `BrettKinny/dotty-stackch
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 
-Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone. Note this clone has two remotes: `origin` → `BrettKinny/dotty-stackchan` (the canonical repo) and `fork` → `pboushy/dotty-stackchan`. Target `origin` unless told otherwise (e.g. `gh issue list --repo BrettKinny/dotty-stackchan`).
+Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone. In this fork, target `origin` (`rawmnr/dotty-stackchan`) for issue work, and use `upstream` (`BrettKinny/dotty-stackchan`) only for source synchronization.
 
 ## Existing label conventions
 

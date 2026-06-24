@@ -7,12 +7,13 @@ description: Swap Dotty's personality by editing the persona prompt or pointing 
 
 Dotty's personality comes from a persona file loaded as the LLM system prompt. **Where** that file lives depends on which LLM provider is active.
 
-Three personas ship in `personas/`:
+Four personas ship in `personas/`:
 
 | File | Style | Used by |
 |---|---|---|
 | `default.md` | Cheerful, curious desktop robot. The general-purpose persona for generic providers. | `OpenAICompat` |
 | `dotty_voice.md` | Voice-tuned variant of `default.md` — same character but pruned for short replies, with the tool catalogue and `[REMEMBER: ...]` markers baked in. | `PiVoiceLLM` |
+| `rawmlab_homelab.md` | Adult French HomeLab assistant with explicit confirmation/refusal rules for sensitive actions. | `OpenAICompat` or copied into the pi persona workspace |
 | `smart.md` | More capable, allowed longer answers — for when `smart_mode` is on and the cloud model is doing the heavy lifting. | optional override |
 
 ## Which file controls the persona?
@@ -31,14 +32,14 @@ Check `selected_module.LLM` in `.config.yaml`, then read the matching block:
    ```yaml
    LLM:
      OpenAICompat:
-       persona_file: personas/smart.md   # was personas/default.md
+       persona_file: personas/rawmlab_homelab.md   # or personas/smart.md
    ```
 
 2. Restart: `docker compose restart xiaozhi-server`.
 
 ## Create your own persona
 
-1. Copy an existing file: `cp personas/dotty_voice.md personas/pirate.md`.
+1. Copy an existing file: `cp personas/rawmlab_homelab.md personas/pirate.md`.
 2. Edit the new file. **Keep the emoji instruction line** — the firmware needs it to animate the face. See [emoji-mapping.md](../emoji-mapping.md) for the allowlist (😊😆😢😮🤔😠😐😍😴).
 3. Point the active provider's `persona_file` at the new file in `.config.yaml`, then restart.
 
