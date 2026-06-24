@@ -1,0 +1,25 @@
+{
+  "reads": {
+    "office_temperature": {
+      "type": "state",
+      "entity_id": "sensor.office_temperature",
+      "label": "Office temperature"
+    },
+    "backup_status": {
+      "type": "state",
+      "entity_id": "sensor.backup_status",
+      "label": "Backup status"
+    }
+  },
+  "actions": {
+    "night_mode": {
+      "type": "service",
+      "domain": "script",
+      "service": "turn_on",
+      "service_data": {
+        "entity_id": "script.night_mode"
+      },
+      "label": "Night mode"
+    }
+  }
+}

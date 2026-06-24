@@ -10,6 +10,8 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { logTurnEnd } from "./lib/turn_logger.ts";
 import { withToolGuardrails } from "./lib/tool_guardrails.ts";
+import { homeAssistantActionTool } from "./tools/home_assistant_action.ts";
+import { homeAssistantReadTool } from "./tools/home_assistant_read.ts";
 import { memoryLookupTool } from "./tools/memory_lookup.ts";
 import { playSongTool } from "./tools/play_song.ts";
 import { recallPersonTool } from "./tools/recall_person.ts";
@@ -19,6 +21,8 @@ import { takePhotoTool } from "./tools/take_photo.ts";
 import { thinkHardTool } from "./tools/think_hard.ts";
 
 export default function (pi: ExtensionAPI) {
+  pi.registerTool(withToolGuardrails(homeAssistantReadTool));
+  pi.registerTool(withToolGuardrails(homeAssistantActionTool));
   pi.registerTool(withToolGuardrails(memoryLookupTool));
   pi.registerTool(withToolGuardrails(recallPersonTool));
   pi.registerTool(withToolGuardrails(rememberTool));

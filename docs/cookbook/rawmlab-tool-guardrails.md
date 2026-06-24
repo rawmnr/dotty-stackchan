@@ -16,6 +16,8 @@ The Rawmlab fork now wraps `dotty-pi-ext` voice tools in a central guardrail pol
 
 Current default classification:
 
+- `home_assistant_read` -> `read_only`
+- `home_assistant_action` -> `sensitive_action`
 - `memory_lookup` -> `read_only`
 - `recall_person` -> `read_only`
 - `think_hard` -> `read_only`

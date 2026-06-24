@@ -1,7 +1,7 @@
 {
   "name": "dotty-pi-ext",
   "version": "0.1.0",
-  "description": "Pi extension exposing Dotty's seven voice tools (memory_lookup, remember, recall_person, remember_person, think_hard, take_photo, play_song). Ports bridge.py's _voice_tool_* handlers per #36; recall_person/remember_person added per #53.",
+  "description": "Pi extension exposing Dotty's voice tools, including memory, music, photo, person recall, and Rawmlab Home Assistant bridge helpers.",
   "type": "module",
   "private": true,
   "pi": {
@@ -15,7 +15,7 @@
     "@earendil-works/pi-coding-agent": "^0.74.0"
   },
   "scripts": {
-    "test": "npm run test:memory && npm run test:memgate && npm run test:recall && npm run test:remember && npm run test:rememberperson && npm run test:turnlog && npm run test:think && npm run test:play && npm run test:adminauth && npm run test:guardrails",
+    "test": "npm run test:memory && npm run test:memgate && npm run test:recall && npm run test:remember && npm run test:rememberperson && npm run test:turnlog && npm run test:think && npm run test:play && npm run test:ha && npm run test:adminauth && npm run test:guardrails",
     "test:memory": "node --experimental-strip-types tests/memory_lookup.test.ts",
     "test:memgate": "node --experimental-strip-types tests/memory_gate.test.ts",
     "test:recall": "node --experimental-strip-types tests/recall_person.test.ts",
@@ -24,6 +24,7 @@
     "test:turnlog": "node --experimental-strip-types tests/turn_log.test.ts",
     "test:think": "node --experimental-strip-types tests/think_hard.test.ts",
     "test:play": "node --experimental-strip-types tests/play_song.test.ts",
+    "test:ha": "node --experimental-strip-types tests/home_assistant.test.ts",
     "test:adminauth": "node --experimental-strip-types tests/admin_auth.test.ts",
     "test:guardrails": "node --experimental-strip-types tests/guardrails.test.ts"
   }

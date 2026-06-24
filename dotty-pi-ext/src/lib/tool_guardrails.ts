@@ -11,6 +11,8 @@ export interface GuardrailDecision {
 }
 
 const DEFAULT_RISK_BY_TOOL: Record<string, ToolRisk> = {
+  home_assistant_read: "read_only",
+  home_assistant_action: "sensitive_action",
   memory_lookup: "read_only",
   recall_person: "read_only",
   think_hard: "read_only",

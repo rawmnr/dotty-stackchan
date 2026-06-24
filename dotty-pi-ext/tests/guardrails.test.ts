@@ -29,6 +29,8 @@ delete process.env.DOTTY_TOOL_DENYLIST;
 delete process.env.DOTTY_ALLOW_SENSITIVE_TOOLS;
 
 assertEq("take_photo classified sensitive", classifyToolRisk("take_photo"), "sensitive_action");
+assertEq("home_assistant_read classified read-only", classifyToolRisk("home_assistant_read"), "read_only");
+assertEq("home_assistant_action classified sensitive", classifyToolRisk("home_assistant_action"), "sensitive_action");
 assertEq("play_song classified safe", classifyToolRisk("play_song"), "safe_action");
 assertEq("unknown classified blocked", classifyToolRisk("does_not_exist"), "blocked_action");
 

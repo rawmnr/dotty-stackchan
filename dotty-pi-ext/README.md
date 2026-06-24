@@ -5,20 +5,23 @@ runtime. Installed inside the [`dotty-pi`](../dotty-pi/) container at
 `/root/.pi/extensions/dotty-pi-ext/`, surfaced to the agent via pi's
 extension manifest.
 
-**Status: 7 of 7 tools live.** The original five (`memory_lookup`,
+**Status: 9 tools live on the Rawmlab fork.** The original five (`memory_lookup`,
 `remember`, `think_hard`, `take_photo`, `play_song`) plus the two
-person-memory tools added in #53 (`recall_person`, `remember_person`).
+person-memory tools added in #53 (`recall_person`, `remember_person`),
+and the two Home Assistant bridge tools (`home_assistant_read`,
+`home_assistant_action`).
 `take_photo` reads from the `dotty-behaviour` daemon
 (`GET /api/voice/take_photo`). The #36 cutover executed on 2026-05-19;
 PiVoiceLLM is the live default voice path and this extension is the
 production source of truth for these tools.
 
-## The seven voice tools
+## The voice tools
 
 These are the tools that voice turns invoke during conversation. The
 original five replicate the semantics of the matching `_voice_tool_*`
 handler (or `/api/voice/*` endpoint) in `bridge.py`; `recall_person` /
-`remember_person` are pi-native, added in #53.
+`remember_person` are pi-native, added in #53. The Rawmlab fork adds
+two Home Assistant bridge tools for allowlisted reads and actions.
 
 | Tool | What it does | Source-of-truth handler |
 |---|---|---|
@@ -29,6 +32,8 @@ handler (or `/api/voice/*` endpoint) in `bridge.py`; `recall_person` /
 | `think_hard(question)` | Direct POST to llama-swap `qwen3.6:27b-think` with `enable_thinking=false`, 200-token cap, terse 1-2 sentence answer. | `bridge.py::_voice_tool_think_hard` |
 | `take_photo()` | GET to dotty-behaviour `/api/voice/take_photo` — returns the latest cached vision description if ≤30 s old, otherwise a "can't see" reply. v2 will actively fire the take_photo MCP and await fresh capture. | `dotty-behaviour::routes/voice.py` (lift of `bridge.py::_voice_tool_take_photo`) |
 | `play_song(name)` | Resolves free-form name against xiaozhi's `/xiaozhi/admin/songs` catalogue (60 s cache), then POSTs `/xiaozhi/admin/play-asset`. | `bridge.py::_voice_tool_play_song` |
+| `home_assistant_read(name)` | Reads one allowlisted Home Assistant state item by key from an external JSON config file. | Rawmlab fork MVP |
+| `home_assistant_action(name)` | Triggers one allowlisted Home Assistant service call by key from an external JSON config file. Guardrailed as sensitive by default. | Rawmlab fork MVP |
 
 ### Not a tool: per-turn auto-log
 
@@ -81,6 +86,14 @@ but extension authors should be aware so tool-result framing matches
 what gets filtered through to xiaozhi.
 
 ## Layout
+
+Rawmlab-specific additions in this fork:
+
+- `src/tools/home_assistant_read.ts`
+- `src/tools/home_assistant_action.ts`
+- `src/lib/home_assistant.ts`
+- `tests/home_assistant.test.ts`
+- `home_assistant.example.json`
 
 ```
 dotty-pi-ext/
