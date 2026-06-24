@@ -71,6 +71,8 @@ The first recommended fork-specific activation path is:
 4. Set `LLM.OpenAICompat.persona_file` to `personas/rawmlab_homelab.md`.
 5. Keep `selected_module.TTS: LocalPiper` and swap the voice model to a French Piper voice when ready.
 
+See also: [cookbook/rawmlab-openrouter.md](./cookbook/rawmlab-openrouter.md) for the shortest OpenRouter-backed MVP path.
+
 ## Scope boundary
 
 Keep these as fork-local concerns:

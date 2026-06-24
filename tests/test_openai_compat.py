@@ -15,6 +15,7 @@ import pathlib
 import re
 import sys
 import types
+import types
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -180,6 +181,51 @@ class TestStreamEmojiOrdering(unittest.TestCase):
         # nothing whitespace-only leaked out ahead of it.
         self.assertTrue(all(c.strip() for c in out), f"whitespace leaked: {out!r}")
         self.assertIn(_FALLBACK, "".join(out))
+
+
+class TestResponseMetricsLogging(unittest.TestCase):
+
+    def test_success_logs_model_and_elapsed_ms(self):
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.iter_lines = lambda decode_unicode=True: iter(_sse("Hello there."))
+        provider = _provider()
+        fake_logger = MagicMock()
+        fake_logger.bind.return_value = fake_logger
+        fake_clock = iter([10.0, 10.25])
+
+        with patch.object(_mod.requests, "post", return_value=resp), \
+             patch.object(_mod, "logger", fake_logger), \
+             patch.object(_mod.time, "perf_counter", side_effect=lambda: next(fake_clock)):
+            out = list(provider.response("sess-1", [{"role": "user", "content": "hi"}]))
+
+        self.assertTrue("".join(out).startswith(_FALLBACK))
+        fake_logger.info.assert_called_once()
+        msg = fake_logger.info.call_args[0][0]
+        self.assertIn("model='m'", msg)
+        self.assertIn("session_id='sess-1'", msg)
+        self.assertIn("elapsed_ms=250", msg)
+        self.assertIn("outcome=ok", msg)
+
+    def test_exception_logs_outcome_error(self):
+        provider = _provider()
+        fake_logger = MagicMock()
+        fake_logger.bind.return_value = fake_logger
+        fake_clock = iter([20.0, 20.05])
+
+        def _boom(_messages):
+            raise RuntimeError("boom")
+            yield  # pragma: no cover
+
+        with patch.object(provider, "_response_stream", side_effect=_boom), \
+             patch.object(_mod, "logger", fake_logger), \
+             patch.object(_mod.time, "perf_counter", side_effect=lambda: next(fake_clock)):
+            with self.assertRaises(RuntimeError):
+                list(provider.response("sess-err", [{"role": "user", "content": "hi"}]))
+
+        fake_logger.info.assert_called_once()
+        msg = fake_logger.info.call_args[0][0]
+        self.assertIn("outcome=error", msg)
 
 
 if __name__ == "__main__":

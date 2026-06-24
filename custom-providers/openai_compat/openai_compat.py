@@ -9,6 +9,7 @@ Config lives in .config.yaml under LLM.OpenAICompat — see the repo's
 
 import json
 import os
+import time
 
 import requests
 
@@ -278,9 +279,28 @@ class LLMProvider(LLMProviderBase):
         enforcement inside _response_stream runs first, so the filter sees —
         and preserves — the leading-emoji contract.
         """
+        start = time.perf_counter()
         messages = self._build_messages(dialogue)
-        yield from filter_tts_stream(
-            self._response_stream(messages),
-            KID_MODE,
-            on_hit=self._on_filter_hit,
-        )
+        chunk_count = 0
+        char_count = 0
+        outcome = "ok"
+        try:
+            for chunk in filter_tts_stream(
+                self._response_stream(messages),
+                KID_MODE,
+                on_hit=self._on_filter_hit,
+            ):
+                chunk_count += 1
+                char_count += len(chunk)
+                yield chunk
+        except Exception:
+            outcome = "error"
+            raise
+        finally:
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            logger.bind(tag=TAG).info(
+                "OpenAICompat response complete "
+                f"model={self.model!r} url={self.base_url!r} "
+                f"session_id={session_id!r} chunks={chunk_count} chars={char_count} "
+                f"elapsed_ms={elapsed_ms} outcome={outcome}"
+            )

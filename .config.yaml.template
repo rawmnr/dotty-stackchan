@@ -128,7 +128,7 @@ LLM:
     # Path to a persona markdown file loaded as the system prompt.
     # Relative paths resolve from the xiaozhi-server working directory
     # inside the container (/opt/xiaozhi-esp32-server).
-    persona_file: personas/default.md
+    persona_file: personas/rawmlab_homelab.md
     max_tokens: 256
     temperature: 0.7
     timeout: 60
