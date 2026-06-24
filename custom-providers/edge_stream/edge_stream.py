@@ -2,6 +2,7 @@ import asyncio
 import io
 import os
 import queue
+import time
 import traceback
 
 import edge_tts
@@ -12,6 +13,7 @@ from core.providers.tts.base import TTSProviderBase
 from core.providers.tts.dto.dto import ContentType, InterfaceType, SentenceType
 from core.utils import opus_encoder_utils, textUtils
 from core.utils.tts import MarkdownCleaner
+from voice_observability import StreamingTurnTracker, elapsed_ms
 
 TAG = __name__
 logger = setup_logging()
@@ -31,6 +33,7 @@ class TTSProvider(TTSProviderBase):
             sample_rate=24000, channels=1, frame_size_ms=60
         )
         self.pcm_buffer = bytearray()
+        self._turn_tracker = StreamingTurnTracker("tts")
 
     def tts_text_priority_thread(self):
         while not self.conn.stop_event.is_set():
@@ -41,6 +44,14 @@ class TTSProvider(TTSProviderBase):
                     self.processed_chars = 0
                     self.tts_text_buff = []
                     self.before_stop_play_files.clear()
+                    turn_id = self._turn_tracker.begin(
+                        getattr(self.conn, "session_id", "sessionless")
+                    )
+                    logger.bind(tag=TAG).info(
+                        f"EdgeStream turn turn_id={turn_id} stage=tts_start "
+                        f"session_id={getattr(self.conn, 'session_id', '')!r} "
+                        f"voice={self.voice!r}"
+                    )
                 elif ContentType.TEXT == message.content_type:
                     self.tts_text_buff.append(message.content_detail)
                     segment_text = self._get_segment_text()
@@ -57,12 +68,26 @@ class TTSProvider(TTSProviderBase):
 
                 if message.sentence_type == SentenceType.LAST:
                     self._process_remaining_text_stream(True)
+                    summary = self._turn_tracker.finish()
+                    if summary is not None:
+                        logger.bind(tag=TAG).info(
+                            f"EdgeStream turn turn_id={summary.turn_id} stage=tts_complete "
+                            f"duration_ms={summary.duration_ms} segments={summary.segments} "
+                            f"chars={summary.chars} outcome=ok"
+                        )
             except queue.Empty:
                 continue
             except Exception as e:
                 logger.bind(tag=TAG).error(
                     f"Edge stream TTS text thread error: {e}\n{traceback.format_exc()}"
                 )
+                summary = self._turn_tracker.finish()
+                if summary is not None:
+                    logger.bind(tag=TAG).error(
+                        f"EdgeStream turn turn_id={summary.turn_id} stage=tts_complete "
+                        f"duration_ms={summary.duration_ms} segments={summary.segments} "
+                        f"chars={summary.chars} outcome=error error_type={type(e).__name__}"
+                    )
 
     def _process_remaining_text_stream(self, is_last=False):
         full_text = "".join(self.tts_text_buff)
@@ -79,6 +104,7 @@ class TTSProvider(TTSProviderBase):
 
     def to_tts_single_stream(self, text, is_last=False):
         text = MarkdownCleaner.clean_markdown(text)
+        self._turn_tracker.note_segment(text)
         try:
             asyncio.run(self.text_to_speak(text, is_last))
         except Exception as e:
@@ -88,6 +114,8 @@ class TTSProvider(TTSProviderBase):
         return None
 
     async def text_to_speak(self, text, is_last):
+        turn_id = self._turn_tracker.current_turn_id() or "sessionless-tts-unknown"
+        synth_start = time.perf_counter()
         frame_bytes = int(
             self.opus_encoder.sample_rate
             * self.opus_encoder.channels
@@ -136,9 +164,20 @@ class TTSProvider(TTSProviderBase):
             if is_last:
                 self._process_before_stop_play_files()
 
+            logger.bind(tag=TAG).info(
+                f"EdgeStream turn turn_id={turn_id} stage=tts_segment "
+                f"duration_ms={elapsed_ms(synth_start)} text_chars={len(text)} "
+                f"audio_bytes={len(seg.raw_data)} is_last={is_last} outcome=ok"
+            )
+
         except Exception as e:
             logger.bind(tag=TAG).error(
                 f"Edge stream synth exception for {text!r}: {e}"
+            )
+            logger.bind(tag=TAG).error(
+                f"EdgeStream turn turn_id={turn_id} stage=tts_segment "
+                f"duration_ms={elapsed_ms(synth_start)} text_chars={len(text)} "
+                f"is_last={is_last} outcome=error error_type={type(e).__name__}"
             )
             self.tts_audio_queue.put((SentenceType.LAST, [], None))
 

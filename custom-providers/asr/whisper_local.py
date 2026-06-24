@@ -9,6 +9,7 @@ from config.logger import setup_logging
 from typing import Optional, Tuple, List
 from core.providers.asr.base import ASRProviderBase
 from core.providers.asr.dto.dto import InterfaceType
+from voice_observability import elapsed_ms, make_turn_id
 
 TAG = __name__
 logger = setup_logging()
@@ -44,6 +45,7 @@ class ASRProvider(ASRProviderBase):
         self.cpu_threads = int(config.get("cpu_threads", 0))
         self.initial_prompt = config.get("initial_prompt", None)
         self.delete_audio_file = delete_audio_file
+        self._turn_seq = 0
 
         if self.output_dir:
             os.makedirs(self.output_dir, exist_ok=True)
@@ -94,6 +96,16 @@ class ASRProvider(ASRProviderBase):
         if artifacts is None:
             return "", None
 
+        self._turn_seq += 1
+        turn_id = make_turn_id(session_id, "stt", self._turn_seq)
+        start = time.perf_counter()
+        audio_bytes = len(getattr(artifacts, "pcm_bytes", b"") or b"")
+        logger.bind(tag=TAG).info(
+            f"WhisperLocal turn turn_id={turn_id} stage=stt_start "
+            f"session_id={session_id!r} audio_bytes={audio_bytes} "
+            f"language={self.language!r} model={self.model_size!r}"
+        )
+
         retry_count = 0
         while retry_count < MAX_RETRIES:
             try:
@@ -138,6 +150,12 @@ class ASRProvider(ASRProviderBase):
                 except Exception as _e:
                     logger.bind(tag=TAG).warning(f"ASR-METRICS log failed (non-fatal): {_e}")
 
+                logger.bind(tag=TAG).info(
+                    f"WhisperLocal turn turn_id={turn_id} stage=stt_complete "
+                    f"duration_ms={elapsed_ms(start)} retries={retry_count} "
+                    f"text_chars={len(content)} outcome=ok segs={len(segments)}"
+                )
+
                 return text, artifacts.file_path
 
             except OSError as e:
@@ -146,14 +164,29 @@ class ASRProvider(ASRProviderBase):
                     logger.bind(tag=TAG).error(
                         f"语音识别失败（已重试{retry_count}次）: {e}", exc_info=True
                     )
+                    logger.bind(tag=TAG).error(
+                        f"WhisperLocal turn turn_id={turn_id} stage=stt_complete "
+                        f"duration_ms={elapsed_ms(start)} retries={retry_count} "
+                        f"outcome=error error_type={type(e).__name__}"
+                    )
                     return "", None
                 logger.bind(tag=TAG).warning(
                     f"语音识别失败，正在重试（{retry_count}/{MAX_RETRIES}）: {e}"
+                )
+                logger.bind(tag=TAG).warning(
+                    f"WhisperLocal turn turn_id={turn_id} stage=stt_retry "
+                    f"duration_ms={elapsed_ms(start)} attempt={retry_count} "
+                    f"error_type={type(e).__name__}"
                 )
                 await asyncio.sleep(RETRY_DELAY)
 
             except Exception as e:
                 logger.bind(tag=TAG).error(f"语音识别失败: {e}", exc_info=True)
+                logger.bind(tag=TAG).error(
+                    f"WhisperLocal turn turn_id={turn_id} stage=stt_complete "
+                    f"duration_ms={elapsed_ms(start)} retries={retry_count} "
+                    f"outcome=error error_type={type(e).__name__}"
+                )
                 return "", None
 
         return "", None
